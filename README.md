@@ -16,11 +16,11 @@
   <a href="https://github.com/chicogong/codepod/releases">
     <img src="https://img.shields.io/github/v/release/chicogong/codepod?include_prereleases" alt="Release">
   </a>
-  <a href="https://github.com/chicogong/codepod/blob/main/LICENSE">
+  <a href="https://github.com/chicogong/codepod/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/chicogong/codepod" alt="License">
   </a>
   <a href="https://codecov.io/gh/chicogong/codepod">
-    <img src="https://codecov.io/gh/chicogong/codepod/branch/main/graph/badge.svg" alt="Coverage">
+    <img src="https://codecov.io/gh/chicogong/codepod/branch/master/graph/badge.svg" alt="Coverage">
   </a>
 </p>
 
@@ -175,12 +175,6 @@ codepod/
 ## Contributing
 
 欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解如何参与开发。
-
-### GitHub Topics
-
-本项目使用以下 topics，便于发现：
-
-`claude` `claude-code` `ai-assistant` `desktop-app` `tauri` `vue3` `rust` `typescript` `chatgpt-alternative`
 
 ## License
 

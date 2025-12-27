@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="56" fill="#1a1a2e" stroke="#7c3aed" stroke-width="4"/>
+  
+  <!-- Code brackets -->
+  <path d="M35 40 L20 60 L35 80" stroke="#7c3aed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M85 40 L100 60 L85 80" stroke="#7c3aed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  
+  <!-- AI sparkle/dot in center -->
+  <circle cx="60" cy="60" r="12" fill="#7c3aed"/>
+  <circle cx="60" cy="60" r="6" fill="#a78bfa"/>
+  
+  <!-- Small decorative dots -->
+  <circle cx="45" cy="50" r="3" fill="#a78bfa" opacity="0.6"/>
+  <circle cx="75" cy="70" r="3" fill="#a78bfa" opacity="0.6"/>
+  <circle cx="50" cy="75" r="2" fill="#a78bfa" opacity="0.4"/>
+  <circle cx="70" cy="45" r="2" fill="#a78bfa" opacity="0.4"/>
+</svg>
