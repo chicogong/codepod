@@ -40,6 +40,8 @@ export default tseslint.config(
         document: 'readonly',
         localStorage: 'readonly',
         crypto: 'readonly',
+        navigator: 'readonly',
+        confirm: 'readonly',
       },
     },
   },

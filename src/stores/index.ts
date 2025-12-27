@@ -1,3 +1,4 @@
 export { useAppStore } from './app'
 export { useChatStore } from './chat'
 export { useSessionStore } from './session'
+export { useConfigStore } from './config'

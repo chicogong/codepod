@@ -1,4 +1,5 @@
 pub mod claude;
+pub mod config;
 
 use serde::{Deserialize, Serialize};
 

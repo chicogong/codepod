@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useAppStore } from '@/stores'
 import Sidebar from './Sidebar.vue'
 import StatusBar from './StatusBar.vue'
+import { ConfigPanel } from '@/components/config'
 
 const appStore = useAppStore()
+const showConfigPanel = ref(false)
 </script>
 
 <template>
@@ -42,12 +45,67 @@ const appStore = useAppStore()
       <Sidebar
         v-if="!appStore.isSidebarCollapsed"
         :width="appStore.sidebarWidth"
+        @show-config="showConfigPanel = true"
       />
 
       <!-- Chat Area -->
       <main class="flex-1 flex flex-col overflow-hidden">
         <slot />
       </main>
+
+      <!-- Config Panel (Slide-over) -->
+      <Transition
+        enter-active-class="transition-transform duration-300 ease-out"
+        enter-from-class="translate-x-full"
+        enter-to-class="translate-x-0"
+        leave-active-class="transition-transform duration-200 ease-in"
+        leave-from-class="translate-x-0"
+        leave-to-class="translate-x-full"
+      >
+        <div
+          v-if="showConfigPanel"
+          class="absolute right-0 top-12 bottom-6 w-96 border-l border-gray-200 dark:border-gray-700 shadow-lg z-20"
+        >
+          <div class="h-full relative">
+            <!-- Close button -->
+            <button
+              class="absolute top-2 right-2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 z-10"
+              @click="showConfigPanel = false"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <ConfigPanel />
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Backdrop -->
+      <Transition
+        enter-active-class="transition-opacity duration-300"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition-opacity duration-200"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="showConfigPanel"
+          class="fixed inset-0 bg-black/20 z-10"
+          @click="showConfigPanel = false"
+        />
+      </Transition>
     </div>
 
     <!-- Status Bar -->

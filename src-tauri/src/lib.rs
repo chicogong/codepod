@@ -1,6 +1,6 @@
 mod commands;
 
-use commands::claude;
+use commands::{claude, config};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -11,6 +11,10 @@ pub fn run() {
             claude::get_claude_version,
             claude::invoke_claude,
             claude::invoke_claude_stream,
+            config::read_config_file,
+            config::write_config_file,
+            config::list_commands,
+            config::list_agents,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

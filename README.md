@@ -43,6 +43,9 @@
 - **Project Selector** - 项目文件夹选择和最近项目列表
 - **Keyboard Shortcuts** - 快捷键支持 (⌘/Ctrl+N, ⌘/Ctrl+D, ⌘/Ctrl+B, ⌘/Ctrl+K)
 - **Message Search** - 消息搜索和高亮显示
+- **Code Highlighting** - 使用 Shiki 进行代码语法高亮
+- **MCP Server Management** - 管理 MCP 服务器配置
+- **Commands & Agents** - 查看和管理自定义 Commands 和 Agents
 
 ## Tech Stack
 
@@ -122,15 +125,16 @@ cargo clippy          # Rust 静态分析
 codepod/
 ├── src/                      # Vue frontend
 │   ├── components/
-│   │   ├── chat/            # ChatView, ChatInput, MessageList, MessageItem, SearchBar
+│   │   ├── chat/            # ChatView, ChatInput, MessageList, MessageItem, SearchBar, CodeBlock
 │   │   ├── session/         # SessionList
 │   │   ├── project/         # ProjectSelector
+│   │   ├── config/          # ConfigPanel, McpServerList, CommandList, AgentList
 │   │   └── layout/          # AppLayout, Sidebar, StatusBar
-│   ├── composables/         # Vue composables (useClaude, useProject, useKeyboard, useSearch)
-│   ├── stores/              # Pinia stores (app, chat, session)
+│   ├── composables/         # Vue composables (useClaude, useProject, useKeyboard, useSearch, useHighlighter)
+│   ├── stores/              # Pinia stores (app, chat, session, config)
 │   └── types/               # TypeScript 类型定义
 ├── src-tauri/               # Rust backend
-│   └── src/commands/        # Tauri commands (Claude CLI 集成)
+│   └── src/commands/        # Tauri commands (Claude CLI, Config 集成)
 ├── tests/                   # 测试文件
 └── .github/                 # GitHub 配置 (CI, Issue 模板)
 ```
@@ -145,19 +149,19 @@ codepod/
 - [x] 亮色/暗色主题
 - [x] CI/CD 配置
 
-### v0.2.0 - Enhanced UX (Current)
+### v0.2.0 - Enhanced UX
 
 - [x] 项目选择器
 - [x] 快捷键支持
 - [x] 消息搜索
-- [ ] 代码高亮改进 (Shiki)
+- [x] 代码高亮改进 (Shiki)
 
-### v0.3.0 - Configuration
+### v0.3.0 - Configuration (Current)
 
-- [ ] MCP 服务器管理
-- [ ] Skills 配置
-- [ ] Commands 配置
-- [ ] Agents 配置
+- [x] MCP 服务器管理
+- [x] Commands 配置
+- [x] Agents 配置
+- [ ] Skills 配置（完善中）
 
 ### v0.4.0 - Advanced Features
 

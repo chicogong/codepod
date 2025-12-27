@@ -1,11 +1,61 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Message, ContentBlock } from '@/types'
+import CodeBlock from './CodeBlock.vue'
 
 const props = defineProps<{
   message: Message
   searchQuery?: string
 }>()
+
+interface ParsedContent {
+  type: 'text' | 'code'
+  content: string
+  language?: string
+}
+
+// Parse text content to extract code blocks
+function parseContent(text: string): ParsedContent[] {
+  const parts: ParsedContent[] = []
+  const codeBlockPattern = /```(\w*)\n([\s\S]*?)```/g
+
+  let lastIndex = 0
+  let match
+
+  while ((match = codeBlockPattern.exec(text)) !== null) {
+    // Add text before code block
+    if (match.index > lastIndex) {
+      const textBefore = text.slice(lastIndex, match.index)
+      if (textBefore.trim()) {
+        parts.push({ type: 'text', content: textBefore })
+      }
+    }
+
+    // Add code block
+    parts.push({
+      type: 'code',
+      content: match[2].trim(),
+      language: match[1] || undefined,
+    })
+
+    lastIndex = match.index + match[0].length
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    const remaining = text.slice(lastIndex)
+    if (remaining.trim()) {
+      parts.push({ type: 'text', content: remaining })
+    }
+  }
+
+  // If no code blocks found, return original text
+  if (parts.length === 0) {
+    parts.push({ type: 'text', content: text })
+  }
+
+  return parts
+}
 
 function renderTextContent(block: ContentBlock): string {
   if (block.type === 'text') {
@@ -19,6 +69,12 @@ function renderTextContent(block: ContentBlock): string {
 
 function isTextBlock(block: ContentBlock): boolean {
   return block.type === 'text' || block.type === 'thinking'
+}
+
+// Get parsed content for a block
+function getParsedContent(block: ContentBlock): ParsedContent[] {
+  const text = renderTextContent(block)
+  return parseContent(text)
 }
 
 // Highlight search matches in text
@@ -94,12 +150,20 @@ const matchesSearch = computed(() => {
       "
     >
       <template v-for="(block, index) in message.content" :key="index">
-        <!-- Text Content with Highlighting -->
-        <div
-          v-if="isTextBlock(block)"
-          class="whitespace-pre-wrap break-words"
-          v-html="highlightText(renderTextContent(block))"
-        />
+        <!-- Text/Code Content with Highlighting -->
+        <template v-if="isTextBlock(block) && block.type === 'text'">
+          <template
+            v-for="(part, partIndex) in getParsedContent(block)"
+            :key="`${index}-${partIndex}`"
+          >
+            <div
+              v-if="part.type === 'text'"
+              class="whitespace-pre-wrap break-words"
+              v-html="highlightText(part.content)"
+            />
+            <CodeBlock v-else :code="part.content" :language="part.language" />
+          </template>
+        </template>
 
         <!-- Thinking Block -->
         <details
