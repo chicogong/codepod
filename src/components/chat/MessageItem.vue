@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Message, ContentBlock } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   message: Message
+  searchQuery?: string
 }>()
 
 function renderTextContent(block: ContentBlock): string {
@@ -18,12 +20,57 @@ function renderTextContent(block: ContentBlock): string {
 function isTextBlock(block: ContentBlock): boolean {
   return block.type === 'text' || block.type === 'thinking'
 }
+
+// Highlight search matches in text
+function highlightText(text: string): string {
+  if (!props.searchQuery?.trim()) return escapeHtml(text)
+
+  const query = props.searchQuery.toLowerCase()
+  const escaped = escapeHtml(text)
+  const lowerEscaped = escaped.toLowerCase()
+
+  let result = ''
+  let lastIndex = 0
+  let pos = 0
+
+  while ((pos = lowerEscaped.indexOf(query, lastIndex)) !== -1) {
+    result += escaped.slice(lastIndex, pos)
+    result += `<mark class="bg-yellow-300 dark:bg-yellow-600 rounded px-0.5">${escaped.slice(pos, pos + query.length)}</mark>`
+    lastIndex = pos + query.length
+  }
+
+  result += escaped.slice(lastIndex)
+  return result
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+// Check if message matches search
+const matchesSearch = computed(() => {
+  if (!props.searchQuery?.trim()) return true
+
+  const query = props.searchQuery.toLowerCase()
+  return props.message.content.some(block => {
+    const text = renderTextContent(block).toLowerCase()
+    return text.includes(query)
+  })
+})
 </script>
 
 <template>
   <div
-    class="mb-6 last:mb-0"
-    :class="message.role === 'user' ? 'text-right' : 'text-left'"
+    class="mb-6 last:mb-0 transition-opacity"
+    :class="[
+      message.role === 'user' ? 'text-right' : 'text-left',
+      matchesSearch ? 'opacity-100' : 'opacity-30',
+    ]"
   >
     <!-- Role Label -->
     <div
@@ -47,10 +94,12 @@ function isTextBlock(block: ContentBlock): boolean {
       "
     >
       <template v-for="(block, index) in message.content" :key="index">
-        <!-- Text Content -->
-        <div v-if="isTextBlock(block)" class="whitespace-pre-wrap break-words">
-          {{ renderTextContent(block) }}
-        </div>
+        <!-- Text Content with Highlighting -->
+        <div
+          v-if="isTextBlock(block)"
+          class="whitespace-pre-wrap break-words"
+          v-html="highlightText(renderTextContent(block))"
+        />
 
         <!-- Thinking Block -->
         <details
@@ -60,9 +109,8 @@ function isTextBlock(block: ContentBlock): boolean {
           <summary class="cursor-pointer">Thinking...</summary>
           <div
             class="mt-1 pl-2 border-l-2 border-gray-300 dark:border-gray-600"
-          >
-            {{ block.thinking }}
-          </div>
+            v-html="highlightText(block.thinking)"
+          />
         </details>
 
         <!-- Tool Use -->
@@ -81,9 +129,10 @@ function isTextBlock(block: ContentBlock): boolean {
           class="mt-2 p-2 bg-gray-200 dark:bg-gray-700 rounded text-sm"
           :class="{ 'border-l-2 border-red-500': block.is_error }"
         >
-          <pre class="whitespace-pre-wrap font-mono text-xs">{{
-            block.content
-          }}</pre>
+          <pre
+            class="whitespace-pre-wrap font-mono text-xs"
+            v-html="highlightText(block.content)"
+          />
         </div>
       </template>
     </div>

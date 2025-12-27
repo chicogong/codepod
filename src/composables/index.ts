@@ -1,1 +1,4 @@
 export { useClaude } from './useClaude'
+export { useProject } from './useProject'
+export { useKeyboard, getShortcutDescriptions } from './useKeyboard'
+export { useSearch } from './useSearch'

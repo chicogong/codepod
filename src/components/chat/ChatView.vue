@@ -1,13 +1,44 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useChatStore } from '@/stores'
-import { useClaude } from '@/composables'
+import { useClaude, useSearch, useKeyboard } from '@/composables'
 import MessageList from './MessageList.vue'
 import ChatInput from './ChatInput.vue'
+import SearchBar from './SearchBar.vue'
 
 const chatStore = useChatStore()
 const { sendMessage, checkClaude, isInitialized, claudeVersion } = useClaude()
+const { searchQuery, isSearchOpen, resultCount, closeSearch, toggleSearch } =
+  useSearch()
 const initError = ref<string | null>(null)
+
+// Register keyboard shortcuts
+useKeyboard([
+  {
+    key: 'k',
+    meta: true,
+    action: toggleSearch,
+    description: 'Search messages',
+  },
+  {
+    key: 'k',
+    ctrl: true,
+    action: toggleSearch,
+    description: 'Search messages',
+  },
+  {
+    key: 'f',
+    meta: true,
+    action: toggleSearch,
+    description: 'Search messages',
+  },
+  {
+    key: 'f',
+    ctrl: true,
+    action: toggleSearch,
+    description: 'Search messages',
+  },
+])
 
 onMounted(async () => {
   const ok = await checkClaude()
@@ -24,6 +55,14 @@ async function handleSend(content: string) {
 
 <template>
   <div class="flex flex-col h-full">
+    <!-- Search Bar -->
+    <SearchBar
+      v-model="searchQuery"
+      :result-count="resultCount"
+      :is-open="isSearchOpen"
+      @close="closeSearch"
+    />
+
     <!-- Init Error Banner -->
     <div
       v-if="initError"
@@ -42,7 +81,7 @@ async function handleSend(content: string) {
 
     <!-- Messages -->
     <div class="flex-1 overflow-y-auto">
-      <MessageList />
+      <MessageList :search-query="searchQuery" />
     </div>
 
     <!-- Input -->

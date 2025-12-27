@@ -40,6 +40,9 @@
 - **Session Management** - 会话列表和历史管理
 - **Dark Mode** - 支持亮色/暗色主题切换
 - **Claude CLI Integration** - 通过 Tauri 调用本地 Claude Code CLI
+- **Project Selector** - 项目文件夹选择和最近项目列表
+- **Keyboard Shortcuts** - 快捷键支持 (⌘/Ctrl+N, ⌘/Ctrl+D, ⌘/Ctrl+B, ⌘/Ctrl+K)
+- **Message Search** - 消息搜索和高亮显示
 
 ## Tech Stack
 
@@ -119,10 +122,11 @@ cargo clippy          # Rust 静态分析
 codepod/
 ├── src/                      # Vue frontend
 │   ├── components/
-│   │   ├── chat/            # ChatView, ChatInput, MessageList, MessageItem
+│   │   ├── chat/            # ChatView, ChatInput, MessageList, MessageItem, SearchBar
 │   │   ├── session/         # SessionList
+│   │   ├── project/         # ProjectSelector
 │   │   └── layout/          # AppLayout, Sidebar, StatusBar
-│   ├── composables/         # Vue composables (useClaude)
+│   ├── composables/         # Vue composables (useClaude, useProject, useKeyboard, useSearch)
 │   ├── stores/              # Pinia stores (app, chat, session)
 │   └── types/               # TypeScript 类型定义
 ├── src-tauri/               # Rust backend
@@ -133,7 +137,7 @@ codepod/
 
 ## Roadmap
 
-### v0.1.0 - MVP (Current)
+### v0.1.0 - MVP
 
 - [x] 基础聊天界面
 - [x] 流式输出支持
@@ -141,12 +145,12 @@ codepod/
 - [x] 亮色/暗色主题
 - [x] CI/CD 配置
 
-### v0.2.0 - Enhanced UX
+### v0.2.0 - Enhanced UX (Current)
 
-- [ ] 项目选择器
-- [ ] 快捷键支持
-- [ ] 消息搜索
-- [ ] 代码高亮改进
+- [x] 项目选择器
+- [x] 快捷键支持
+- [x] 消息搜索
+- [ ] 代码高亮改进 (Shiki)
 
 ### v0.3.0 - Configuration
 

@@ -3,6 +3,10 @@ import { computed, nextTick, watch, ref } from 'vue'
 import { useChatStore } from '@/stores'
 import MessageItem from './MessageItem.vue'
 
+defineProps<{
+  searchQuery?: string
+}>()
+
 const chatStore = useChatStore()
 const containerRef = ref<HTMLDivElement | null>(null)
 
@@ -65,6 +69,7 @@ watch(
         v-for="message in allMessages"
         :key="message.uuid"
         :message="message"
+        :search-query="searchQuery"
       />
     </div>
   </div>
