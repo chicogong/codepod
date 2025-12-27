@@ -36,12 +36,10 @@
 
 ## Features
 
-- 🗨️ **Chat Interface** - 流畅的聊天体验，支持流式输出
-- 📚 **Session Management** - 会话历史的保存和恢复
-- 📁 **Project Selector** - 支持切换工作目录
-- ⚙️ **Config Manager** - 可视化配置管理 (MCP, Skills, Commands, Agents)
-- 🌙 **Dark Mode** - 支持亮色/暗色主题切换
-- 🔧 **Tool Integration** - 支持 Claude Code 的所有工具调用
+- **Chat Interface** - 流畅的聊天体验，支持流式输出
+- **Session Management** - 会话列表和历史管理
+- **Dark Mode** - 支持亮色/暗色主题切换
+- **Claude CLI Integration** - 通过 Tauri 调用本地 Claude Code CLI
 
 ## Tech Stack
 
@@ -121,22 +119,14 @@ cargo clippy          # Rust 静态分析
 codepod/
 ├── src/                      # Vue frontend
 │   ├── components/
-│   │   ├── chat/            # 聊天组件 (ChatView, ChatInput, MessageList)
-│   │   ├── session/         # 会话管理组件
-│   │   ├── config/          # 配置管理组件
-│   │   └── layout/          # 布局组件 (AppLayout, Sidebar, StatusBar)
-│   ├── stores/              # Pinia stores
-│   │   ├── app.ts           # 应用状态 (主题、项目路径)
-│   │   ├── chat.ts          # 聊天状态 (消息、流式输出)
-│   │   └── session.ts       # 会话历史状态
-│   ├── types/               # TypeScript 类型定义
-│   └── views/               # 页面视图
+│   │   ├── chat/            # ChatView, ChatInput, MessageList, MessageItem
+│   │   ├── session/         # SessionList
+│   │   └── layout/          # AppLayout, Sidebar, StatusBar
+│   ├── composables/         # Vue composables (useClaude)
+│   ├── stores/              # Pinia stores (app, chat, session)
+│   └── types/               # TypeScript 类型定义
 ├── src-tauri/               # Rust backend
-│   ├── src/
-│   │   ├── commands/        # Tauri commands (Claude CLI 集成)
-│   │   └── lib.rs           # 应用入口
-│   ├── Cargo.toml
-│   └── tauri.conf.json
+│   └── src/commands/        # Tauri commands (Claude CLI 集成)
 ├── tests/                   # 测试文件
 └── .github/                 # GitHub 配置 (CI, Issue 模板)
 ```

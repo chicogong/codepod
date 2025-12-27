@@ -1,32 +1,45 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { useChatStore } from '@/stores'
+import { useClaude } from '@/composables'
 import MessageList from './MessageList.vue'
 import ChatInput from './ChatInput.vue'
 
 const chatStore = useChatStore()
+const { sendMessage, checkClaude, isInitialized, claudeVersion } = useClaude()
+const initError = ref<string | null>(null)
+
+onMounted(async () => {
+  const ok = await checkClaude()
+  if (!ok) {
+    initError.value =
+      'Claude CLI not found. Please install Claude Code CLI first.'
+  }
+})
 
 async function handleSend(content: string) {
-  if (!content.trim() || chatStore.isStreaming) return
-
-  // Add user message
-  chatStore.addUserMessage(content)
-
-  // TODO: Call Claude CLI via Tauri
-  // For now, simulate a response
-  chatStore.startStreaming()
-
-  setTimeout(() => {
-    chatStore.appendToStreamingContent({
-      type: 'text',
-      text: 'This is a simulated response. Claude CLI integration coming soon!',
-    })
-    chatStore.finalizeStreaming()
-  }, 1000)
+  await sendMessage(content)
 }
 </script>
 
 <template>
   <div class="flex flex-col h-full">
+    <!-- Init Error Banner -->
+    <div
+      v-if="initError"
+      class="bg-red-100 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+    >
+      {{ initError }}
+    </div>
+
+    <!-- Claude Version Badge -->
+    <div
+      v-else-if="claudeVersion"
+      class="bg-green-100 dark:bg-green-900/30 border-b border-green-200 dark:border-green-800 px-4 py-2 text-xs text-green-700 dark:text-green-300"
+    >
+      Connected to {{ claudeVersion }}
+    </div>
+
     <!-- Messages -->
     <div class="flex-1 overflow-y-auto">
       <MessageList />
@@ -36,7 +49,7 @@ async function handleSend(content: string) {
     <div class="border-t border-gray-200 dark:border-gray-700 p-4">
       <ChatInput
         ref="inputRef"
-        :disabled="chatStore.isStreaming"
+        :disabled="chatStore.isStreaming || !isInitialized"
         @send="handleSend"
       />
     </div>

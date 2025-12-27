@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { useSessionStore, useChatStore } from '@/stores'
+import { useChatStore } from '@/stores'
+import { SessionList } from '@/components/session'
+import type { Session } from '@/types'
 
 defineProps<{
   width: number
 }>()
 
-const sessionStore = useSessionStore()
 const chatStore = useChatStore()
 
 function handleNewChat() {
   chatStore.clearMessages()
+}
+
+function handleSelectSession(session: Session) {
+  // TODO: Load session messages from storage
+  chatStore.loadSession(session.id, [])
 }
 </script>
 
@@ -24,43 +30,24 @@ function handleNewChat() {
         class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
         @click="handleNewChat"
       >
-        <span>+</span>
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
         <span>New Chat</span>
       </button>
     </div>
 
     <!-- Session List -->
-    <div class="flex-1 overflow-y-auto px-2">
-      <template
-        v-for="(sessions, group) in sessionStore.groupedSessions"
-        :key="group"
-      >
-        <div class="mb-4">
-          <h3
-            class="px-2 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase"
-          >
-            {{ group }}
-          </h3>
-          <ul class="space-y-1">
-            <li
-              v-for="session in sessions"
-              :key="session.id"
-              class="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer truncate"
-            >
-              {{ session.title }}
-            </li>
-          </ul>
-        </div>
-      </template>
-
-      <!-- Empty State -->
-      <div
-        v-if="sessionStore.sessionCount === 0"
-        class="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-500"
-      >
-        <p class="text-sm">No conversations yet</p>
-        <p class="text-xs mt-1">Start a new chat to begin</p>
-      </div>
-    </div>
+    <SessionList class="flex-1 overflow-hidden" @select="handleSelectSession" />
   </aside>
 </template>
