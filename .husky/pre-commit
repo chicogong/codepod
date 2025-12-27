@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# Add bun to PATH
+export PATH="$HOME/.bun/bin:$PATH"
+
+# Run lint-staged for formatting and linting
+bunx lint-staged
+
+# Run TypeScript check
+bun run typecheck
