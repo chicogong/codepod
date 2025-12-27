@@ -6,10 +6,12 @@ export const useChatStore = defineStore('chat', () => {
   // State
   const messages = ref<Message[]>([])
   const isStreaming = ref(false)
-  const currentModel = ref<ModelId>('claude-sonnet-4-20250514')
+  const currentModel = ref<ModelId>('claude-4.5')
   const currentSessionId = ref<string | null>(null)
   const streamingContent = ref<ContentBlock[]>([])
   const error = ref<string | null>(null)
+  const abortController = ref<AbortController | null>(null)
+  const lastUserMessage = ref<string | null>(null)
 
   // Getters
   const lastMessage = computed(() =>
@@ -93,6 +95,39 @@ export const useChatStore = defineStore('chat', () => {
     error.value = null
   }
 
+  // 创建 AbortController 用于中断请求
+  function createAbortController(): AbortController {
+    abortController.value = new AbortController()
+    return abortController.value
+  }
+
+  // 停止流式生成
+  function stopStreaming() {
+    if (abortController.value) {
+      abortController.value.abort()
+      abortController.value = null
+    }
+    // 保留已生成的内容
+    if (streamingContent.value.length > 0) {
+      addAssistantMessage([...streamingContent.value])
+      streamingContent.value = []
+    }
+    isStreaming.value = false
+  }
+
+  // 记录最后的用户消息（用于重新生成）
+  function setLastUserMessage(content: string) {
+    lastUserMessage.value = content
+  }
+
+  // 移除最后一条 assistant 消息（用于重新生成）
+  function removeLastAssistantMessage() {
+    const lastMsg = messages.value[messages.value.length - 1]
+    if (messages.value.length > 0 && lastMsg && lastMsg.role === 'assistant') {
+      messages.value.pop()
+    }
+  }
+
   return {
     // State
     messages,
@@ -101,6 +136,8 @@ export const useChatStore = defineStore('chat', () => {
     currentSessionId,
     streamingContent,
     error,
+    abortController,
+    lastUserMessage,
 
     // Getters
     lastMessage,
@@ -117,5 +154,9 @@ export const useChatStore = defineStore('chat', () => {
     clearMessages,
     setModel,
     loadSession,
+    createAbortController,
+    stopStreaming,
+    setLastUserMessage,
+    removeLastAssistantMessage,
   }
 })

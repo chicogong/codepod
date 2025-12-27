@@ -5,7 +5,8 @@ import { useProject } from '@/composables'
 const appStore = useAppStore()
 const { selectProject, openRecentProject, isSelecting } = useProject()
 
-function formatDate(date: Date | string): string {
+function formatDate(date: Date | string | undefined): string {
+  if (!date) return ''
   const d = new Date(date)
   return d.toLocaleDateString('zh-CN', {
     month: 'short',

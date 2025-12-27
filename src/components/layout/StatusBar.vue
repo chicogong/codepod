@@ -1,15 +1,38 @@
 <script setup lang="ts">
 import { useAppStore, useChatStore } from '@/stores'
-import { useProject } from '@/composables'
+import { useClaude, useProject } from '@/composables'
 import { AVAILABLE_MODELS } from '@/types'
 
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const { selectProject } = useProject()
+const { connectionMode, isInitialized } = useClaude()
 
 const currentModelName = () => {
   const model = AVAILABLE_MODELS.find(m => m.id === chatStore.currentModel)
   return model?.name ?? 'Unknown'
+}
+
+const connectionModeText = () => {
+  switch (connectionMode.value) {
+    case 'tauri':
+      return 'Tauri'
+    case 'http':
+      return 'HTTP'
+    default:
+      return 'Disconnected'
+  }
+}
+
+const connectionModeClass = () => {
+  switch (connectionMode.value) {
+    case 'tauri':
+      return 'text-blue-500'
+    case 'http':
+      return 'text-purple-500'
+    default:
+      return 'text-red-500'
+  }
 }
 </script>
 
@@ -44,15 +67,26 @@ const currentModelName = () => {
 
       <!-- Model -->
       <span>{{ currentModelName() }}</span>
+
+      <span class="text-gray-300 dark:text-gray-600">|</span>
+
+      <!-- Connection Mode -->
+      <span :class="connectionModeClass()" class="font-medium">
+        {{ connectionModeText() }}
+      </span>
     </div>
     <div class="flex items-center gap-4">
       <span v-if="chatStore.isStreaming" class="flex items-center gap-1">
         <span class="animate-pulse text-green-500">●</span>
         Generating...
       </span>
-      <span v-else class="flex items-center gap-1">
+      <span v-else-if="isInitialized" class="flex items-center gap-1">
         <span class="text-green-500">●</span>
         Ready
+      </span>
+      <span v-else class="flex items-center gap-1">
+        <span class="text-red-500">●</span>
+        Not Connected
       </span>
     </div>
   </footer>

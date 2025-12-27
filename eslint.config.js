@@ -29,6 +29,7 @@ export default tseslint.config(
         HTMLDivElement: 'readonly',
         HTMLElement: 'readonly',
         HTMLInputElement: 'readonly',
+        HTMLSelectElement: 'readonly',
         KeyboardEvent: 'readonly',
         Event: 'readonly',
         setTimeout: 'readonly',

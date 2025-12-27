@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useChatStore } from '@/stores'
 import { useClaude, useSearch, useKeyboard } from '@/composables'
 import MessageList from './MessageList.vue'
@@ -7,10 +7,30 @@ import ChatInput from './ChatInput.vue'
 import SearchBar from './SearchBar.vue'
 
 const chatStore = useChatStore()
-const { sendMessage, checkClaude, isInitialized, claudeVersion } = useClaude()
+const {
+  sendMessage,
+  checkClaude,
+  reconnect,
+  isInitialized,
+  claudeVersion,
+  connectionMode,
+  setHttpApiUrl,
+} = useClaude()
 const { searchQuery, isSearchOpen, resultCount, closeSearch, toggleSearch } =
   useSearch()
 const initError = ref<string | null>(null)
+const isConnecting = ref(false)
+const customApiUrl = ref('http://127.0.0.1:3002')
+
+// 连接状态文本
+const connectionStatusText = computed(() => {
+  if (connectionMode.value === 'tauri') {
+    return `Tauri: ${claudeVersion.value}`
+  } else if (connectionMode.value === 'http') {
+    return `HTTP API: ${customApiUrl.value}`
+  }
+  return null
+})
 
 // Register keyboard shortcuts
 useKeyboard([
@@ -41,12 +61,28 @@ useKeyboard([
 ])
 
 onMounted(async () => {
-  const ok = await checkClaude()
-  if (!ok) {
-    initError.value =
-      'Claude CLI not found. Please install Claude Code CLI first.'
-  }
+  await tryConnect()
 })
+
+async function tryConnect() {
+  isConnecting.value = true
+  initError.value = null
+
+  try {
+    const ok = await checkClaude()
+    if (!ok) {
+      initError.value =
+        'Claude not connected. Start HTTP API server with: codebuddy --serve --port 3000'
+    }
+  } finally {
+    isConnecting.value = false
+  }
+}
+
+async function handleReconnect() {
+  setHttpApiUrl(customApiUrl.value)
+  await tryConnect()
+}
 
 async function handleSend(content: string) {
   await sendMessage(content)
@@ -63,20 +99,56 @@ async function handleSend(content: string) {
       @close="closeSearch"
     />
 
-    <!-- Init Error Banner -->
+    <!-- Connection Error Banner -->
     <div
       v-if="initError"
-      class="bg-red-100 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+      class="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-3"
     >
-      {{ initError }}
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-amber-700 dark:text-amber-300">
+          <span class="font-medium">{{ initError }}</span>
+        </div>
+      </div>
+      <!-- 手动连接选项 -->
+      <div class="mt-2 flex items-center gap-2">
+        <input
+          v-model="customApiUrl"
+          type="text"
+          placeholder="HTTP API URL"
+          class="flex-1 px-2 py-1 text-xs rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+        />
+        <button
+          class="px-3 py-1 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded transition-colors disabled:opacity-50"
+          :disabled="isConnecting"
+          @click="handleReconnect"
+        >
+          {{ isConnecting ? 'Connecting...' : 'Connect' }}
+        </button>
+      </div>
+      <div class="mt-2 text-xs text-amber-600 dark:text-amber-400">
+        Tip: Run
+        <code class="bg-amber-100 dark:bg-amber-900 px-1 rounded"
+          >codebuddy --serve --port 3000</code
+        >
+        to start HTTP API server
+      </div>
     </div>
 
-    <!-- Claude Version Badge -->
+    <!-- Connected Badge -->
     <div
-      v-else-if="claudeVersion"
-      class="bg-green-100 dark:bg-green-900/30 border-b border-green-200 dark:border-green-800 px-4 py-2 text-xs text-green-700 dark:text-green-300"
+      v-else-if="connectionStatusText"
+      class="bg-green-100 dark:bg-green-900/30 border-b border-green-200 dark:border-green-800 px-4 py-2 text-xs text-green-700 dark:text-green-300 flex items-center justify-between"
     >
-      Connected to {{ claudeVersion }}
+      <span class="flex items-center gap-2">
+        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+        Connected: {{ connectionStatusText }}
+      </span>
+      <button
+        class="text-green-600 dark:text-green-400 hover:underline"
+        @click="reconnect"
+      >
+        Reconnect
+      </button>
     </div>
 
     <!-- Messages -->

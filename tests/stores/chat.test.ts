@@ -20,7 +20,7 @@ describe('Chat Store', () => {
 
     it('should have default model', () => {
       const store = useChatStore()
-      expect(store.currentModel).toBe('claude-sonnet-4-20250514')
+      expect(store.currentModel).toBe('claude-4.5')
     })
 
     it('should have no error', () => {
@@ -114,9 +114,9 @@ describe('Chat Store', () => {
   describe('setModel', () => {
     it('should change the current model', () => {
       const store = useChatStore()
-      store.setModel('claude-opus-4-20250514')
+      store.setModel('claude-opus-4.5')
 
-      expect(store.currentModel).toBe('claude-opus-4-20250514')
+      expect(store.currentModel).toBe('claude-opus-4.5')
     })
   })
 

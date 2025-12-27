@@ -56,9 +56,12 @@ export interface ClaudeOptions {
 }
 
 export type ModelId =
-  | 'claude-sonnet-4-20250514'
-  | 'claude-opus-4-20250514'
-  | 'claude-haiku-3-5-20241022'
+  | 'claude-4.5'
+  | 'claude-opus-4.5'
+  | 'claude-haiku-4.5'
+  | 'gemini-2.5-pro'
+  | 'gpt-5.1'
+  | 'deepseek-v3-2-volc-ioa'
 
 export interface Model {
   id: ModelId
@@ -68,18 +71,33 @@ export interface Model {
 
 export const AVAILABLE_MODELS: Model[] = [
   {
-    id: 'claude-sonnet-4-20250514',
-    name: 'Claude Sonnet 4',
+    id: 'claude-4.5',
+    name: 'Claude 4.5',
     description: '平衡性能与速度',
   },
   {
-    id: 'claude-opus-4-20250514',
-    name: 'Claude Opus 4',
+    id: 'claude-opus-4.5',
+    name: 'Claude Opus 4.5',
     description: '最强能力',
   },
   {
-    id: 'claude-haiku-3-5-20241022',
-    name: 'Claude Haiku 3.5',
+    id: 'claude-haiku-4.5',
+    name: 'Claude Haiku 4.5',
     description: '快速响应',
+  },
+  {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    description: 'Google Gemini',
+  },
+  {
+    id: 'gpt-5.1',
+    name: 'GPT 5.1',
+    description: 'OpenAI GPT',
+  },
+  {
+    id: 'deepseek-v3-2-volc-ioa',
+    name: 'DeepSeek V3',
+    description: 'DeepSeek',
   },
 ]
