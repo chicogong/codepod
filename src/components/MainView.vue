@@ -60,7 +60,8 @@ function closeTerminal(id: string) {
   // Switch to another terminal or chat
   if (activeTerminalId.value === id) {
     if (terminalSessions.value.length > 0) {
-      activeTerminalId.value = terminalSessions.value[0].id
+      const firstSession = terminalSessions.value[0]
+      activeTerminalId.value = firstSession ? firstSession.id : null
     } else {
       activeTerminalId.value = null
       viewMode.value = 'chat'
@@ -168,10 +169,11 @@ watch(viewMode, mode => {
         <!-- Terminal Tabs -->
         <div v-if="terminalSessions.length > 1" class="terminal-tabs">
           <NTabs
-            v-model:value="activeTerminalId"
+            :value="activeTerminalId || undefined"
             type="card"
             size="small"
             closable
+            @update:value="(val: string) => (activeTerminalId = val)"
             @close="closeTerminal"
           >
             <NTabPane

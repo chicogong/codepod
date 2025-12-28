@@ -114,6 +114,19 @@ export const useSessionStore = defineStore('session', () => {
     saveSessions()
   }
 
+  function createSession(): Session {
+    const newSession: Session = {
+      id: crypto.randomUUID(),
+      projectPath: '',
+      title: 'New Chat',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      messageCount: 0,
+    }
+    addSession(newSession)
+    return newSession
+  }
+
   function addSession(session: Session) {
     sessions.value.unshift(session)
     saveSessions()
@@ -173,6 +186,7 @@ export const useSessionStore = defineStore('session', () => {
     groupedSessions,
 
     // Actions
+    createSession,
     setSessions,
     addSession,
     removeSession,
