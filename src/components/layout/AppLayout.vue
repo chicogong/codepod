@@ -189,7 +189,11 @@ import { h } from 'vue'
       <TabBar />
 
       <!-- Content -->
-      <NLayoutContent class="app-content" :native-scrollbar="false">
+      <NLayoutContent
+        class="app-content"
+        content-class="app-content-inner"
+        :native-scrollbar="true"
+      >
         <slot />
       </NLayoutContent>
 
@@ -219,6 +223,13 @@ import { h } from 'vue'
 .main-layout {
   display: flex;
   flex-direction: column;
+}
+
+/* Override Naive UI's scroll container to use flex layout */
+.main-layout :deep(> .n-layout-scroll-container) {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1;
 }
 
 .app-header {
@@ -291,5 +302,14 @@ import { h } from 'vue'
 .app-content {
   flex: 1;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.app-content-inner) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 </style>

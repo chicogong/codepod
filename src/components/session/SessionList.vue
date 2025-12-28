@@ -117,7 +117,9 @@ function formatDate(date: Date): string {
                 <!-- Editing mode -->
                 <input
                   v-if="editingSessionId === session.id"
+                  :id="`edit-session-${session.id}`"
                   v-model="editingTitle"
+                  :name="`edit-session-${session.id}`"
                   class="w-full px-1 py-0.5 text-sm bg-white dark:bg-gray-800 border border-primary-500 rounded focus:outline-none"
                   autofocus
                   @click.stop

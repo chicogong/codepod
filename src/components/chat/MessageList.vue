@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, watch, ref } from 'vue'
+import { computed, nextTick, watch, ref, onUnmounted } from 'vue'
 import { useChatStore } from '@/stores'
 import MessageItem from './MessageItem.vue'
 
@@ -9,6 +9,28 @@ defineProps<{
 
 const chatStore = useChatStore()
 const containerRef = ref<HTMLDivElement | null>(null)
+
+// 节流控制：减少滚动操作频率
+let scrollThrottleTimer: ReturnType<typeof setTimeout> | null = null
+const SCROLL_THROTTLE_MS = 50 // 50ms 节流
+
+function scrollToBottom() {
+  if (scrollThrottleTimer) return // 已有定时器，跳过
+
+  scrollThrottleTimer = setTimeout(() => {
+    scrollThrottleTimer = null
+    if (containerRef.value) {
+      containerRef.value.scrollTop = containerRef.value.scrollHeight
+    }
+  }, SCROLL_THROTTLE_MS)
+}
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (scrollThrottleTimer) {
+    clearTimeout(scrollThrottleTimer)
+  }
+})
 
 const allMessages = computed(() => {
   const msgs = [...chatStore.messages]
@@ -27,14 +49,12 @@ const allMessages = computed(() => {
   return msgs
 })
 
-// Auto-scroll to bottom
+// Auto-scroll to bottom (with throttle)
 watch(
   () => chatStore.streamingContent.length,
   async () => {
     await nextTick()
-    if (containerRef.value) {
-      containerRef.value.scrollTop = containerRef.value.scrollHeight
-    }
+    scrollToBottom()
   }
 )
 
@@ -42,9 +62,7 @@ watch(
   () => chatStore.messages.length,
   async () => {
     await nextTick()
-    if (containerRef.value) {
-      containerRef.value.scrollTop = containerRef.value.scrollHeight
-    }
+    scrollToBottom()
   }
 )
 </script>

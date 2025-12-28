@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { isTauri, safeInvoke, safeListen } from '@/utils'
 import '@xterm/xterm/css/xterm.css'
 
 const props = defineProps<{
@@ -103,16 +104,37 @@ async function initTerminal() {
 async function connectPty() {
   if (isConnected.value) return
 
-  try {
-    const { invoke } = await import('@tauri-apps/api/core')
-    const { listen } = await import('@tauri-apps/api/event')
+  // Check if running in Tauri
+  if (!isTauri()) {
+    // In browser mode, show a friendly message and mark as "connected" to hide overlay
+    terminal?.writeln('')
+    terminal?.writeln('\x1b[1;33m  ⚠ Terminal - Browser Mode\x1b[0m')
+    terminal?.writeln('')
+    terminal?.writeln(
+      '\x1b[90m  Terminal PTY requires the Tauri native environment.\x1b[0m'
+    )
+    terminal?.writeln('')
+    terminal?.writeln('\x1b[32m  To use terminal features, run:\x1b[0m')
+    terminal?.writeln('\x1b[37m    $ npm run tauri:dev\x1b[0m')
+    terminal?.writeln('')
+    terminal?.writeln(
+      '\x1b[90m  Meanwhile, you can use the Chat view to interact\x1b[0m'
+    )
+    terminal?.writeln('\x1b[90m  with Claude via HTTP API.\x1b[0m')
+    terminal?.writeln('')
 
+    // Mark as connected to hide the overlay
+    isConnected.value = true
+    return
+  }
+
+  try {
     // Get terminal dimensions
     const cols = terminal?.cols || 80
     const rows = terminal?.rows || 24
 
     // Create Claude PTY session
-    const sessionId = await invoke<string>('create_claude_pty', {
+    const sessionId = await safeInvoke<string>('create_claude_pty', {
       cwd: props.cwd,
       resumeSession: props.sessionId,
       cols,
@@ -123,7 +145,7 @@ async function connectPty() {
     isConnected.value = true
 
     // Listen for PTY output
-    unlistenOutput = await listen<{ session_id: string; data: string }>(
+    unlistenOutput = await safeListen<{ session_id: string; data: string }>(
       'pty-output',
       event => {
         if (event.payload.session_id === currentSessionId.value) {
@@ -133,7 +155,7 @@ async function connectPty() {
     )
 
     // Listen for PTY exit
-    unlistenExit = await listen<{
+    unlistenExit = await safeListen<{
       session_id: string
       exit_code: number | null
     }>('pty-exit', event => {
@@ -157,11 +179,10 @@ async function connectPty() {
 
 // Send input to PTY
 async function sendInput(data: string) {
-  if (!currentSessionId.value) return
+  if (!currentSessionId.value || !isTauri()) return
 
   try {
-    const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('write_to_pty', {
+    await safeInvoke('write_to_pty', {
       sessionId: currentSessionId.value,
       data,
     })
@@ -172,11 +193,10 @@ async function sendInput(data: string) {
 
 // Resize PTY
 async function resizePty() {
-  if (!currentSessionId.value || !terminal) return
+  if (!currentSessionId.value || !terminal || !isTauri()) return
 
   try {
-    const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('resize_pty', {
+    await safeInvoke('resize_pty', {
       sessionId: currentSessionId.value,
       cols: terminal.cols,
       rows: terminal.rows,
@@ -196,11 +216,10 @@ function handleResize() {
 
 // Disconnect from PTY
 async function disconnect() {
-  if (!currentSessionId.value) return
+  if (!currentSessionId.value || !isTauri()) return
 
   try {
-    const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('close_pty_session', {
+    await safeInvoke('close_pty_session', {
       sessionId: currentSessionId.value,
     })
   } catch (error) {

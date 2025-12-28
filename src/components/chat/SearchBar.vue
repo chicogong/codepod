@@ -56,9 +56,11 @@ function handleKeydown(event: KeyboardEvent) {
       />
     </svg>
     <input
+      id="search-messages"
       ref="inputRef"
       :value="modelValue"
       type="text"
+      name="search-messages"
       placeholder="Search messages..."
       class="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none"
       @input="handleInput"

@@ -67,6 +67,8 @@ defineExpose({ focus })
     <div class="flex items-center justify-between mb-2 px-1">
       <!-- Model Selector -->
       <select
+        id="model-selector"
+        name="model-selector"
         :value="chatStore.currentModel"
         :disabled="chatStore.isStreaming"
         class="text-xs bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-gray-600 dark:text-gray-400 focus:outline-none focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
@@ -111,10 +113,12 @@ defineExpose({ focus })
       class="flex items-end gap-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 focus-within:border-primary-500 dark:focus-within:border-primary-500 transition-colors"
     >
       <textarea
+        id="chat-input"
         ref="textareaRef"
         v-model="content"
         :disabled="disabled || chatStore.isStreaming"
         placeholder="Message Claude..."
+        name="chat-input"
         rows="1"
         class="flex-1 px-3 py-2 bg-transparent text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 resize-none outline-none disabled:opacity-50"
         style="max-height: 200px"

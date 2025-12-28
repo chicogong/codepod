@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Project } from '@/types'
 
+export type ViewMode = 'chat' | 'terminal'
+
 export const useAppStore = defineStore('app', () => {
   // State
   const currentProject = ref<Project | null>(null)
@@ -9,6 +11,7 @@ export const useAppStore = defineStore('app', () => {
   const isDarkMode = ref(false)
   const sidebarWidth = ref(260)
   const isSidebarCollapsed = ref(false)
+  const viewMode = ref<ViewMode>('chat')
 
   // Getters
   const projectName = computed(() => {
@@ -53,6 +56,10 @@ export const useAppStore = defineStore('app', () => {
     isSidebarCollapsed.value = !isSidebarCollapsed.value
   }
 
+  function setViewMode(mode: ViewMode) {
+    viewMode.value = mode
+  }
+
   function loadPersistedState() {
     // Load dark mode
     const savedDarkMode = localStorage.getItem('darkMode')
@@ -85,6 +92,7 @@ export const useAppStore = defineStore('app', () => {
     isDarkMode,
     sidebarWidth,
     isSidebarCollapsed,
+    viewMode,
 
     // Getters
     projectName,
@@ -94,6 +102,7 @@ export const useAppStore = defineStore('app', () => {
     setCurrentProject,
     toggleDarkMode,
     toggleSidebar,
+    setViewMode,
     loadPersistedState,
   }
 })

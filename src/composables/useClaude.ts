@@ -249,6 +249,9 @@ export function useClaude() {
     }
   }
 
+  // 跟踪是否已通过流式事件接收到内容
+  let hasReceivedStreamContent = false
+
   /**
    * 处理 HTTP 流消息
    */
@@ -258,11 +261,40 @@ export function useClaude() {
       if (message.subtype === 'init' && message.session_id) {
         // 可以保存 session_id 用于后续会话
         console.log('[Claude] Session ID:', message.session_id)
+        // 重置流式内容标记
+        hasReceivedStreamContent = false
       }
       return
     }
 
-    if (message.type === 'assistant' && message.message) {
+    // 处理流式事件 (stream_event) - 增量更新
+    if (message.type === 'stream_event') {
+      const event = (
+        message as unknown as {
+          event?: { type?: string; delta?: { type?: string; text?: string } }
+        }
+      ).event
+      if (
+        event?.type === 'content_block_delta' &&
+        event.delta?.type === 'text_delta' &&
+        event.delta.text
+      ) {
+        hasReceivedStreamContent = true
+        chatStore.appendToStreamingContent({
+          type: 'text',
+          text: event.delta.text,
+        })
+      }
+      return
+    }
+
+    // 只有在没有通过流式事件接收内容时，才处理 assistant 消息
+    // 这避免了流式内容和完整消息的重复
+    if (
+      message.type === 'assistant' &&
+      message.message &&
+      !hasReceivedStreamContent
+    ) {
       const content = message.message.content
 
       if (typeof content === 'string') {

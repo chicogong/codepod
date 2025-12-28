@@ -189,6 +189,11 @@ const server = http.createServer(async (req, res) => {
           outputFormat,
         ]
 
+        // 流式输出需要 --include-partial-messages 来获取增量更新
+        if (outputFormat === 'stream-json') {
+          args.push('--include-partial-messages')
+        }
+
         if (cliConfig.requiresVerbose && outputFormat === 'stream-json') {
           args.push('--verbose')
         }
@@ -218,16 +223,25 @@ const server = http.createServer(async (req, res) => {
         console.log('[Proxy] Spawning:', cliConfig.path, args)
         const child = spawn(cliConfig.path, args, {
           stdio: ['pipe', 'pipe', 'pipe'],
+          env: {
+            ...process.env,
+            // 禁用 Node.js stdout 缓冲
+            PYTHONUNBUFFERED: '1',
+            NODE_OPTIONS: '--no-warnings',
+          },
         })
 
         let outputBuffer = ''
+
+        // 设置 stdout 为流式模式，尽快发送数据
+        child.stdout.setEncoding('utf8')
 
         child.stdout.on('data', data => {
           const text = data.toString()
           outputBuffer += text
 
           if (outputFormat === 'stream-json') {
-            // 转换为 SSE 格式
+            // 转换为 SSE 格式，立即发送每一行
             const lines = text.split('\n')
             for (const line of lines) {
               if (line.trim()) {

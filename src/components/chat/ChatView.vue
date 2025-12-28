@@ -12,7 +12,6 @@ const {
   sendMessage,
   checkClaude,
   reconnect,
-  isInitialized,
   claudeVersion,
   connectionMode,
   setHttpApiUrl,
@@ -186,7 +185,7 @@ async function handleSend(content: string) {
     <div class="border-t border-gray-200 dark:border-gray-700 p-4">
       <ChatInput
         ref="inputRef"
-        :disabled="chatStore.isStreaming || !isInitialized"
+        :disabled="chatStore.isStreaming"
         @send="handleSend"
       />
     </div>

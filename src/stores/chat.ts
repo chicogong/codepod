@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 import type { Message, ContentBlock, ModelId } from '@/types'
 import { useSessionStore } from './session'
 
@@ -20,13 +20,18 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'claude-3.5-haiku': { input: 0.8, output: 4.0 },
 }
 
+// 防抖保存的定时器
+let saveDebounceTimer: ReturnType<typeof setTimeout> | null = null
+const SAVE_DEBOUNCE_MS = 1000 // 1秒防抖
+
 export const useChatStore = defineStore('chat', () => {
   // State
   const messages = ref<Message[]>([])
   const isStreaming = ref(false)
   const currentModel = ref<ModelId>('claude-4.5')
   const currentSessionId = ref<string | null>(null)
-  const streamingContent = ref<ContentBlock[]>([])
+  // 使用 shallowRef 减少流式内容的响应式开销
+  const streamingContent = shallowRef<ContentBlock[]>([])
   const error = ref<string | null>(null)
   const abortController = ref<AbortController | null>(null)
   const lastUserMessage = ref<string | null>(null)
@@ -61,12 +66,35 @@ export const useChatStore = defineStore('chat', () => {
     }
   })
 
-  // Auto-save messages when they change
+  // Auto-save messages when they change (with debounce)
   function saveCurrentSession() {
+    if (currentSessionId.value && messages.value.length > 0) {
+      // 清除之前的定时器
+      if (saveDebounceTimer) {
+        clearTimeout(saveDebounceTimer)
+      }
+      // 设置新的防抖定时器
+      saveDebounceTimer = setTimeout(() => {
+        const sessionStore = useSessionStore()
+        sessionStore.saveMessages(currentSessionId.value!, messages.value)
+        // Update session metadata
+        sessionStore.updateSession(currentSessionId.value!, {
+          messageCount: messages.value.length,
+          updatedAt: new Date(),
+        })
+      }, SAVE_DEBOUNCE_MS)
+    }
+  }
+
+  // 立即保存（用于关键操作如停止生成）
+  function saveCurrentSessionNow() {
+    if (saveDebounceTimer) {
+      clearTimeout(saveDebounceTimer)
+      saveDebounceTimer = null
+    }
     if (currentSessionId.value && messages.value.length > 0) {
       const sessionStore = useSessionStore()
       sessionStore.saveMessages(currentSessionId.value, messages.value)
-      // Update session metadata
       sessionStore.updateSession(currentSessionId.value, {
         messageCount: messages.value.length,
         updatedAt: new Date(),
@@ -103,13 +131,16 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function appendToStreamingContent(block: ContentBlock) {
-    const lastBlock = streamingContent.value[streamingContent.value.length - 1]
+    const currentContent = streamingContent.value
+    const lastBlock = currentContent[currentContent.length - 1]
 
     if (block.type === 'text' && lastBlock?.type === 'text') {
-      // Append to existing text block
+      // 直接修改最后一个块的文本，然后触发更新
       lastBlock.text += block.text
+      // 使用 shallowRef 需要手动触发更新
+      streamingContent.value = [...currentContent]
     } else {
-      streamingContent.value.push(block)
+      streamingContent.value = [...currentContent, block]
     }
   }
 
@@ -194,6 +225,8 @@ export const useChatStore = defineStore('chat', () => {
       streamingContent.value = []
     }
     isStreaming.value = false
+    // 立即保存
+    saveCurrentSessionNow()
   }
 
   // 记录最后的用户消息（用于重新生成）
@@ -266,6 +299,7 @@ export const useChatStore = defineStore('chat', () => {
     deleteMessage,
     editMessage,
     saveCurrentSession,
+    saveCurrentSessionNow,
     addTokens,
     resetTokens,
     setCurrentSessionId,

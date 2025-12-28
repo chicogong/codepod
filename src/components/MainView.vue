@@ -6,12 +6,13 @@ import { ChatView } from './chat'
 import { TerminalView } from './terminal'
 import { useAppStore } from '@/stores'
 
-type ViewMode = 'chat' | 'terminal'
-
 const appStore = useAppStore()
 
-// Current view mode
-const viewMode = ref<ViewMode>('chat')
+// Use appStore.viewMode instead of local state
+const viewMode = computed({
+  get: () => appStore.viewMode,
+  set: val => appStore.setViewMode(val),
+})
 
 // Terminal sessions
 interface TerminalSession {
@@ -223,8 +224,10 @@ watch(viewMode, mode => {
 .main-view {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
+  background: var(--n-color);
 }
 
 .view-tabs {

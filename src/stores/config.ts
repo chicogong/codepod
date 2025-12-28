@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import { safeInvoke, isTauri } from '@/utils'
 import type {
   McpConfig,
   McpServer,
@@ -46,12 +46,19 @@ export const useConfigStore = defineStore('config', () => {
 
   // Actions
   async function loadMcpConfig() {
+    if (!isTauri()) {
+      error.value = 'Config loading requires Tauri environment'
+      return
+    }
     isLoading.value = true
     error.value = null
     try {
-      const result = await invoke<CommandResult<string>>('read_config_file', {
-        path: '~/.mcp.json',
-      })
+      const result = await safeInvoke<CommandResult<string>>(
+        'read_config_file',
+        {
+          path: '~/.mcp.json',
+        }
+      )
       if (result.success && result.data) {
         mcpConfig.value = JSON.parse(result.data)
       }
@@ -63,10 +70,11 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   async function saveMcpConfig() {
+    if (!isTauri()) return
     isLoading.value = true
     error.value = null
     try {
-      await invoke<CommandResult<void>>('write_config_file', {
+      await safeInvoke<CommandResult<void>>('write_config_file', {
         path: '~/.mcp.json',
         content: JSON.stringify(mcpConfig.value, null, 2),
       })
@@ -108,12 +116,16 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   async function loadSettings() {
+    if (!isTauri()) return
     isLoading.value = true
     error.value = null
     try {
-      const result = await invoke<CommandResult<string>>('read_config_file', {
-        path: '~/.claude/settings.json',
-      })
+      const result = await safeInvoke<CommandResult<string>>(
+        'read_config_file',
+        {
+          path: '~/.claude/settings.json',
+        }
+      )
       if (result.success && result.data) {
         settingsConfig.value = JSON.parse(result.data)
       }
@@ -125,10 +137,11 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   async function loadCommands() {
+    if (!isTauri()) return
     isLoading.value = true
     error.value = null
     try {
-      const result = await invoke<CommandResult<Command[]>>('list_commands')
+      const result = await safeInvoke<CommandResult<Command[]>>('list_commands')
       if (result.success && result.data) {
         commands.value = result.data
       }
@@ -140,10 +153,11 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   async function loadAgents() {
+    if (!isTauri()) return
     isLoading.value = true
     error.value = null
     try {
-      const result = await invoke<CommandResult<Agent[]>>('list_agents')
+      const result = await safeInvoke<CommandResult<Agent[]>>('list_agents')
       if (result.success && result.data) {
         agents.value = result.data
       }
@@ -155,10 +169,11 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   async function loadSkills() {
+    if (!isTauri()) return
     isLoading.value = true
     error.value = null
     try {
-      const result = await invoke<CommandResult<Skill[]>>('list_skills')
+      const result = await safeInvoke<CommandResult<Skill[]>>('list_skills')
       if (result.success && result.data) {
         skills.value = result.data
       }

@@ -82,15 +82,18 @@ function renderTextContent(block: ContentBlock): string {
   return ''
 }
 
-function isTextBlock(block: ContentBlock): boolean {
-  return block.type === 'text' || block.type === 'thinking'
-}
-
-// Get parsed content for a block
-function getParsedContent(block: ContentBlock): ParsedContent[] {
-  const text = renderTextContent(block)
-  return parseContent(text)
-}
+// 使用 computed 缓存解析结果，避免每次渲染都重新解析
+const parsedBlocks = computed(() => {
+  return props.message.content.map(block => {
+    if (block.type === 'text') {
+      return {
+        block,
+        parsed: parseContent(block.text),
+      }
+    }
+    return { block, parsed: null }
+  })
+})
 
 // Highlight search matches in text
 function highlightText(text: string): string {
@@ -263,11 +266,11 @@ function regenerate() {
 
       <!-- Display Mode -->
       <template v-else>
-        <template v-for="(block, index) in message.content" :key="index">
+        <template v-for="(item, index) in parsedBlocks" :key="index">
           <!-- Text/Code Content with Highlighting -->
-          <template v-if="isTextBlock(block) && block.type === 'text'">
+          <template v-if="item.parsed">
             <template
-              v-for="(part, partIndex) in getParsedContent(block)"
+              v-for="(part, partIndex) in item.parsed"
               :key="`${index}-${partIndex}`"
             >
               <div
@@ -285,35 +288,43 @@ function regenerate() {
 
           <!-- Thinking Block -->
           <details
-            v-if="block.type === 'thinking'"
+            v-if="item.block.type === 'thinking'"
             class="mt-2 text-sm opacity-70"
           >
             <summary class="cursor-pointer">Thinking...</summary>
             <div
               class="mt-1 pl-2 border-l-2 border-gray-300 dark:border-gray-600"
-              v-html="highlightText(block.thinking)"
+              v-html="
+                highlightText((item.block as { thinking: string }).thinking)
+              "
             />
           </details>
 
           <!-- Tool Use -->
           <div
-            v-if="block.type === 'tool_use'"
+            v-if="item.block.type === 'tool_use'"
             class="mt-2 p-2 bg-gray-200 dark:bg-gray-700 rounded text-sm"
           >
             <div class="font-mono text-xs text-gray-500 dark:text-gray-400">
-              Tool: {{ block.name }}
+              Tool: {{ (item.block as { name: string }).name }}
             </div>
           </div>
 
           <!-- Tool Result -->
           <div
-            v-if="block.type === 'tool_result'"
+            v-if="item.block.type === 'tool_result'"
             class="mt-2 p-2 bg-gray-200 dark:bg-gray-700 rounded text-sm"
-            :class="{ 'border-l-2 border-red-500': block.is_error }"
+            :class="{
+              'border-l-2 border-red-500': (
+                item.block as { is_error?: boolean }
+              ).is_error,
+            }"
           >
             <pre
               class="whitespace-pre-wrap font-mono text-xs"
-              v-html="highlightText(block.content)"
+              v-html="
+                highlightText((item.block as { content: string }).content)
+              "
             />
           </div>
         </template>

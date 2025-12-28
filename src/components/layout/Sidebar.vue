@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useChatStore } from '@/stores'
+import { useChatStore, useSessionStore, useAppStore } from '@/stores'
+import { useTabsStore } from '@/stores/tabs'
 import { SessionList } from '@/components/session'
 import type { Session } from '@/types'
 
@@ -12,14 +13,32 @@ const emit = defineEmits<{
 }>()
 
 const chatStore = useChatStore()
+const sessionStore = useSessionStore()
+const tabsStore = useTabsStore()
+const appStore = useAppStore()
 
 function handleNewChat() {
+  // 清空当前消息
   chatStore.clearMessages()
+  // 创建新 session
+  const session = sessionStore.createSession('New Chat')
+  // 设置当前 session
+  chatStore.setCurrentSessionId(session.id)
+  // 添加到 tabs
+  tabsStore.addTab(session)
+  // 切换到 Chat 视图
+  appStore.setViewMode('chat')
 }
 
 function handleSelectSession(session: Session) {
-  // TODO: Load session messages from storage
-  chatStore.loadSession(session.id, [])
+  // Save current session before switching
+  chatStore.saveCurrentSession()
+  // Load messages from storage
+  chatStore.loadSessionFromStorage(session.id)
+  // Add or switch to tab
+  tabsStore.addTab(session)
+  // 切换到 Chat 视图
+  appStore.setViewMode('chat')
 }
 </script>
 
