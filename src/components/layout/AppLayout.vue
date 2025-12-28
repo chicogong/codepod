@@ -1,5 +1,26 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import {
+  NLayout,
+  NLayoutHeader,
+  NLayoutSider,
+  NLayoutContent,
+  NButton,
+  NIcon,
+  NTooltip,
+  NDrawer,
+  NDrawerContent,
+  NSpace,
+  NDropdown,
+} from 'naive-ui'
+import {
+  SunnyOutline,
+  MoonOutline,
+  SettingsOutline,
+  FolderOpenOutline,
+  MenuOutline,
+  ChevronDownOutline,
+} from '@vicons/ionicons5'
 import { useAppStore, useChatStore, useSessionStore } from '@/stores'
 import { useTabsStore } from '@/stores/tabs'
 import Sidebar from './Sidebar.vue'
@@ -12,6 +33,7 @@ const chatStore = useChatStore()
 const sessionStore = useSessionStore()
 const tabsStore = useTabsStore()
 const showConfigPanel = ref(false)
+const sidebarCollapsed = ref(false)
 
 // Initialize tabs on mount
 onMounted(() => {
@@ -35,109 +57,239 @@ onMounted(() => {
     chatStore.loadSessionFromStorage(tabsStore.activeTab.sessionId)
   }
 })
+
+// Project selector options
+const projectOptions = [
+  {
+    label: 'Open Project...',
+    key: 'open',
+    icon: () => h(NIcon, null, { default: () => h(FolderOpenOutline) }),
+  },
+]
+
+function handleProjectSelect(key: string) {
+  if (key === 'open') {
+    // TODO: Open project dialog
+  }
+}
+
+// Import h for rendering icons in dropdown
+import { h } from 'vue'
 </script>
 
 <template>
-  <div class="flex flex-col h-screen bg-white dark:bg-gray-900">
-    <!-- Top Bar -->
-    <header
-      class="flex items-center h-12 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+  <NLayout class="app-layout" has-sider position="absolute">
+    <!-- Sidebar -->
+    <NLayoutSider
+      v-if="!appStore.isSidebarCollapsed"
+      bordered
+      collapse-mode="width"
+      :collapsed="sidebarCollapsed"
+      :collapsed-width="0"
+      :width="appStore.sidebarWidth"
+      :native-scrollbar="false"
+      class="app-sider"
     >
-      <div class="flex items-center gap-2">
-        <span class="text-lg font-semibold text-gray-800 dark:text-white"
-          >CodePod</span
-        >
-      </div>
-      <div class="flex-1 flex justify-center">
-        <button
-          class="px-3 py-1 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-        >
-          {{ appStore.projectName }}
-          <span class="ml-1 text-gray-400">▼</span>
-        </button>
-      </div>
-      <div class="flex items-center gap-2">
-        <button
-          class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          @click="appStore.toggleDarkMode"
-        >
-          <span v-if="appStore.isDarkMode">☀️</span>
-          <span v-else>🌙</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Sidebar -->
       <Sidebar
-        v-if="!appStore.isSidebarCollapsed"
         :width="appStore.sidebarWidth"
         @show-config="showConfigPanel = true"
       />
+    </NLayoutSider>
 
-      <!-- Chat Area -->
-      <main class="flex-1 flex flex-col overflow-hidden">
-        <TabBar />
-        <slot />
-      </main>
-
-      <!-- Config Panel (Slide-over) -->
-      <Transition
-        enter-active-class="transition-transform duration-300 ease-out"
-        enter-from-class="translate-x-full"
-        enter-to-class="translate-x-0"
-        leave-active-class="transition-transform duration-200 ease-in"
-        leave-from-class="translate-x-0"
-        leave-to-class="translate-x-full"
-      >
-        <div
-          v-if="showConfigPanel"
-          class="absolute right-0 top-12 bottom-6 w-96 border-l border-gray-200 dark:border-gray-700 shadow-lg z-20"
-        >
-          <div class="h-full relative">
-            <!-- Close button -->
-            <button
-              class="absolute top-2 right-2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 z-10"
-              @click="showConfigPanel = false"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+    <!-- Main Content -->
+    <NLayout class="main-layout">
+      <!-- Header -->
+      <NLayoutHeader bordered class="app-header">
+        <div class="header-left">
+          <!-- Toggle Sidebar -->
+          <NTooltip trigger="hover">
+            <template #trigger>
+              <NButton
+                quaternary
+                circle
+                size="small"
+                @click="appStore.toggleSidebar"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <ConfigPanel />
+                <template #icon>
+                  <NIcon :component="MenuOutline" />
+                </template>
+              </NButton>
+            </template>
+            Toggle Sidebar
+          </NTooltip>
+
+          <!-- Logo -->
+          <div class="app-logo">
+            <span class="logo-text">CodePod</span>
           </div>
         </div>
-      </Transition>
 
-      <!-- Backdrop -->
-      <Transition
-        enter-active-class="transition-opacity duration-300"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition-opacity duration-200"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div
-          v-if="showConfigPanel"
-          class="fixed inset-0 bg-black/20 z-10"
-          @click="showConfigPanel = false"
-        />
-      </Transition>
-    </div>
+        <!-- Project Selector -->
+        <div class="header-center">
+          <NDropdown
+            trigger="click"
+            :options="projectOptions"
+            @select="handleProjectSelect"
+          >
+            <NButton text class="project-selector">
+              <NIcon :component="FolderOpenOutline" class="project-icon" />
+              <span class="project-name">{{
+                appStore.projectName || 'No Project'
+              }}</span>
+              <NIcon :component="ChevronDownOutline" :size="14" />
+            </NButton>
+          </NDropdown>
+        </div>
 
-    <!-- Status Bar -->
-    <StatusBar />
-  </div>
+        <!-- Header Actions -->
+        <div class="header-right">
+          <NSpace :size="4">
+            <!-- Theme Toggle -->
+            <NTooltip trigger="hover">
+              <template #trigger>
+                <NButton
+                  quaternary
+                  circle
+                  size="small"
+                  @click="appStore.toggleDarkMode"
+                >
+                  <template #icon>
+                    <NIcon
+                      :component="
+                        appStore.isDarkMode ? SunnyOutline : MoonOutline
+                      "
+                    />
+                  </template>
+                </NButton>
+              </template>
+              {{ appStore.isDarkMode ? 'Light Mode' : 'Dark Mode' }}
+            </NTooltip>
+
+            <!-- Settings -->
+            <NTooltip trigger="hover">
+              <template #trigger>
+                <NButton
+                  quaternary
+                  circle
+                  size="small"
+                  @click="showConfigPanel = true"
+                >
+                  <template #icon>
+                    <NIcon :component="SettingsOutline" />
+                  </template>
+                </NButton>
+              </template>
+              Settings
+            </NTooltip>
+          </NSpace>
+        </div>
+      </NLayoutHeader>
+
+      <!-- Tab Bar -->
+      <TabBar />
+
+      <!-- Content -->
+      <NLayoutContent class="app-content" :native-scrollbar="false">
+        <slot />
+      </NLayoutContent>
+
+      <!-- Status Bar -->
+      <StatusBar />
+    </NLayout>
+
+    <!-- Config Panel Drawer -->
+    <NDrawer v-model:show="showConfigPanel" :width="400" placement="right">
+      <NDrawerContent title="Settings" closable>
+        <ConfigPanel />
+      </NDrawerContent>
+    </NDrawer>
+  </NLayout>
 </template>
+
+<style scoped>
+.app-layout {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-sider {
+  background: var(--n-color);
+}
+
+.main-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-text {
+  font-size: 16px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #7c3aed, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.project-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--n-text-color-2);
+  transition: all 0.2s;
+}
+
+.project-selector:hover {
+  background: var(--n-color-target);
+}
+
+.project-icon {
+  font-size: 16px;
+}
+
+.project-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.app-content {
+  flex: 1;
+  overflow: hidden;
+}
+</style>

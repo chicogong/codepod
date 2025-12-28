@@ -1,6 +1,11 @@
 mod commands;
+mod pty;
 
 use commands::{claude, config};
+use pty::{
+    create_pty_session, write_to_pty, resize_pty, 
+    close_pty_session, list_pty_sessions, create_claude_pty
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,6 +21,13 @@ pub fn run() {
             config::list_commands,
             config::list_agents,
             config::list_skills,
+            // PTY commands
+            create_pty_session,
+            write_to_pty,
+            resize_pty,
+            close_pty_session,
+            list_pty_sessions,
+            create_claude_pty,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
