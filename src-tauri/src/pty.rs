@@ -17,7 +17,7 @@ struct PtySession {
     writer: Box<dyn Write + Send>,
 }
 
-/// Global PTY session manager
+// Global PTY session manager
 lazy_static::lazy_static! {
     static ref PTY_SESSIONS: Arc<Mutex<HashMap<String, PtySession>>> = 
         Arc::new(Mutex::new(HashMap::new()));

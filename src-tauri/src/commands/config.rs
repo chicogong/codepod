@@ -6,9 +6,9 @@ use tokio::fs;
 
 /// Expand ~ to home directory
 fn expand_path(path: &str) -> PathBuf {
-    if path.starts_with("~/") {
+    if let Some(stripped) = path.strip_prefix("~/") {
         if let Some(home) = dirs::home_dir() {
-            return home.join(&path[2..]);
+            return home.join(stripped);
         }
     }
     PathBuf::from(path)
@@ -87,7 +87,7 @@ pub async fn list_commands() -> CommandResult<Vec<CommandInfo>> {
         Ok(mut entries) => {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 let path = entry.path();
-                if path.extension().map_or(false, |e| e == "md") {
+                if path.extension().is_some_and(|e| e == "md") {
                     if let Ok(content) = fs::read_to_string(&path).await {
                         let name = path.file_stem()
                             .and_then(|s| s.to_str())
@@ -127,7 +127,7 @@ pub async fn list_agents() -> CommandResult<Vec<AgentInfo>> {
         Ok(mut entries) => {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 let path = entry.path();
-                if path.extension().map_or(false, |e| e == "md") {
+                if path.extension().is_some_and(|e| e == "md") {
                     if let Ok(content) = fs::read_to_string(&path).await {
                         let name = path.file_stem()
                             .and_then(|s| s.to_str())
@@ -168,7 +168,7 @@ pub async fn list_skills() -> CommandResult<Vec<SkillInfo>> {
         Ok(mut entries) => {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 let path = entry.path();
-                if path.extension().map_or(false, |e| e == "md") {
+                if path.extension().is_some_and(|e| e == "md") {
                     if let Ok(content) = fs::read_to_string(&path).await {
                         let name = path.file_stem()
                             .and_then(|s| s.to_str())
@@ -195,15 +195,15 @@ pub async fn list_skills() -> CommandResult<Vec<SkillInfo>> {
 
 /// Parse YAML frontmatter from markdown content
 fn parse_frontmatter(content: &str) -> (Option<String>, String) {
-    if content.starts_with("---") {
-        if let Some(end) = content[3..].find("---") {
-            let frontmatter = &content[3..end + 3];
-            let body = content[end + 6..].trim().to_string();
+    if let Some(stripped) = content.strip_prefix("---") {
+        if let Some(end) = stripped.find("---") {
+            let frontmatter = &stripped[..end];
+            let body = stripped[end + 3..].trim().to_string();
             
             // Simple extraction of description field
             for line in frontmatter.lines() {
-                if line.starts_with("description:") {
-                    let desc = line["description:".len()..].trim();
+                if let Some(desc_value) = line.strip_prefix("description:") {
+                    let desc = desc_value.trim();
                     return (Some(desc.trim_matches('"').to_string()), body);
                 }
             }

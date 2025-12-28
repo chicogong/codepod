@@ -5,23 +5,13 @@ use tauri::{command, AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ClaudeOptions {
     pub model: Option<String>,
     pub session_id: Option<String>,
+    #[serde(default)]
     pub continue_session: bool,
     pub cwd: Option<String>,
-}
-
-impl Default for ClaudeOptions {
-    fn default() -> Self {
-        Self {
-            model: None,
-            session_id: None,
-            continue_session: false,
-            cwd: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
