@@ -5,11 +5,15 @@
 
 import type { ClaudeOptions, ContentBlock } from '@/types'
 
+// CLI 类型
+export type CliType = 'claude' | 'codebuddy'
+
 // HTTP API 配置
 export interface HttpApiConfig {
   host: string
   port: number
   baseUrl: string
+  cliType: CliType
 }
 
 // Agent 请求参数
@@ -25,6 +29,7 @@ export interface AgentRequest {
   resume?: string
   dangerouslySkipPermissions?: boolean
   addDir?: string[]
+  cliType?: CliType // 可选指定 CLI 类型
 }
 
 // 流式消息类型
@@ -60,9 +65,14 @@ class ClaudeHttpService {
     host: '127.0.0.1',
     port: 3002,
     baseUrl: 'http://127.0.0.1:3002',
+    cliType: 'claude',
   }
 
   private isServerRunning = false
+  private availableClis: { claude: boolean; codebuddy: boolean } = {
+    claude: false,
+    codebuddy: false,
+  }
 
   /**
    * 设置 API 配置
@@ -96,6 +106,21 @@ class ClaudeHttpService {
       clearTimeout(timeoutId)
 
       if (response.ok) {
+        // 尝试解析健康检查响应，获取 CLI 可用性信息
+        try {
+          const data = (await response.json()) as {
+            currentCli?: CliType
+            availableClis?: { claude: boolean; codebuddy: boolean }
+          }
+          if (data.availableClis) {
+            this.availableClis = data.availableClis
+          }
+          if (data.currentCli) {
+            this.config.cliType = data.currentCli
+          }
+        } catch {
+          // 忽略解析错误
+        }
         return true
       }
 
@@ -391,6 +416,67 @@ class ClaudeHttpService {
    */
   getServerRunning(): boolean {
     return this.isServerRunning
+  }
+
+  /**
+   * 获取当前 CLI 类型
+   */
+  getCliType(): CliType {
+    return this.config.cliType
+  }
+
+  /**
+   * 设置 CLI 类型
+   */
+  async setCliType(cliType: CliType): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.config.baseUrl}/cli`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cliType }),
+      })
+
+      if (response.ok) {
+        this.config.cliType = cliType
+        return true
+      }
+
+      const error = (await response.json()) as { error?: string }
+      console.error('[ClaudeHttp] Failed to set CLI type:', error.error)
+      return false
+    } catch (error) {
+      console.error('[ClaudeHttp] Error setting CLI type:', error)
+      return false
+    }
+  }
+
+  /**
+   * 获取可用的 CLI 类型
+   */
+  getAvailableClis(): { claude: boolean; codebuddy: boolean } {
+    return { ...this.availableClis }
+  }
+
+  /**
+   * 获取 CLI 状态信息
+   */
+  async getCliStatus(): Promise<{
+    currentCli: CliType
+    cliPath: string
+    availableClis: string[]
+  } | null> {
+    try {
+      const response = await fetch(`${this.config.baseUrl}/cli`, {
+        method: 'GET',
+      })
+
+      if (response.ok) {
+        return response.json()
+      }
+      return null
+    } catch {
+      return null
+    }
   }
 }
 

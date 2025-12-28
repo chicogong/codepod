@@ -1,20 +1,63 @@
 #!/usr/bin/env node
 /* eslint-disable no-undef */
 /**
- * CodeBuddy Proxy Server
- * 将 HTTP 请求转发到 codebuddy -p 命令
+ * Claude Code Proxy Server
+ * 将 HTTP 请求转发到 claude/codebuddy 命令
  *
  * 用法: node scripts/proxy-server.js [port]
- * 默认端口: 3000
+ * 默认端口: 3002
+ *
+ * 环境变量:
+ * - CLI_TYPE: 'claude' | 'codebuddy' (默认: 'claude')
+ * - CLAUDE_PATH: claude CLI 路径 (默认: /opt/homebrew/bin/claude)
+ * - CODEBUDDY_PATH: codebuddy CLI 路径 (默认: codebuddy)
  */
 
 import http from 'http'
-import { spawn } from 'child_process'
+import { spawn, execFileSync } from 'child_process'
 
 const PORT = process.argv[2] || process.env.PORT || 3002
 
-// 使用环境变量或默认命令名（假设在 PATH 中）
-const CODEBUDDY_PATH = process.env.CODEBUDDY_PATH || 'codebuddy'
+// CLI 配置
+const CLI_CONFIGS = {
+  claude: {
+    path: process.env.CLAUDE_PATH || '/opt/homebrew/bin/claude',
+    // Claude Code CLI 参数
+    skipPermissions: '--dangerously-skip-permissions',
+    requiresVerbose: true, // stream-json 需要 --verbose
+  },
+  codebuddy: {
+    path: process.env.CODEBUDDY_PATH || 'codebuddy',
+    // CodeBuddy CLI 参数
+    skipPermissions: '-y',
+    requiresVerbose: false,
+  },
+}
+
+// 当前使用的 CLI 类型（可通过 API 切换）
+let currentCliType = process.env.CLI_TYPE || 'claude'
+
+/**
+ * 检测 CLI 是否可用
+ */
+function detectCli(cliType) {
+  const config = CLI_CONFIGS[cliType]
+  if (!config) return false
+
+  try {
+    execFileSync(config.path, ['--version'], { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 获取当前 CLI 配置
+ */
+function getCurrentCliConfig() {
+  return CLI_CONFIGS[currentCliType] || CLI_CONFIGS.claude
+}
 
 const server = http.createServer(async (req, res) => {
   // CORS 头
@@ -31,8 +74,83 @@ const server = http.createServer(async (req, res) => {
 
   // 健康检查
   if (req.url === '/health' || req.url === '/doctor') {
+    const claudeAvailable = detectCli('claude')
+    const codebuddyAvailable = detectCli('codebuddy')
+
     res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify({ status: 'ok', version: 'proxy-1.0.0' }))
+    res.end(
+      JSON.stringify({
+        status: 'ok',
+        version: 'proxy-1.1.0',
+        currentCli: currentCliType,
+        cliPath: getCurrentCliConfig().path,
+        availableClis: {
+          claude: claudeAvailable,
+          codebuddy: codebuddyAvailable,
+        },
+      })
+    )
+    return
+  }
+
+  // 获取/设置 CLI 类型
+  if (req.url === '/cli' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(
+      JSON.stringify({
+        currentCli: currentCliType,
+        cliPath: getCurrentCliConfig().path,
+        availableClis: Object.keys(CLI_CONFIGS),
+      })
+    )
+    return
+  }
+
+  if (req.url === '/cli' && req.method === 'POST') {
+    let body = ''
+    req.on('data', chunk => {
+      body += chunk.toString()
+    })
+    req.on('end', () => {
+      try {
+        const { cliType } = JSON.parse(body)
+        if (!CLI_CONFIGS[cliType]) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(
+            JSON.stringify({
+              error: `Invalid CLI type: ${cliType}. Available: ${Object.keys(CLI_CONFIGS).join(', ')}`,
+            })
+          )
+          return
+        }
+
+        // 检测 CLI 是否可用
+        if (!detectCli(cliType)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(
+            JSON.stringify({
+              error: `CLI '${cliType}' is not available at path: ${CLI_CONFIGS[cliType].path}`,
+            })
+          )
+          return
+        }
+
+        currentCliType = cliType
+        console.log(`[Proxy] Switched to CLI: ${cliType}`)
+
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(
+          JSON.stringify({
+            success: true,
+            currentCli: currentCliType,
+            cliPath: getCurrentCliConfig().path,
+          })
+        )
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: err.message }))
+      }
+    })
     return
   }
 
@@ -49,7 +167,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const request = JSON.parse(body)
         console.log('[Proxy] Parsed request:', request)
-        const { prompt, outputFormat = 'stream-json', model } = request
+        const { prompt, outputFormat = 'stream-json', model, cliType } = request
 
         if (!prompt) {
           res.writeHead(400, { 'Content-Type': 'application/json' })
@@ -57,13 +175,33 @@ const server = http.createServer(async (req, res) => {
           return
         }
 
+        // 如果请求中指定了 cliType，临时使用该类型
+        const useCliType =
+          cliType && CLI_CONFIGS[cliType] ? cliType : currentCliType
+        const cliConfig = CLI_CONFIGS[useCliType]
+
         // 构建命令参数
-        const args = ['-p', prompt, '-y', '--output-format', outputFormat]
+        const args = [
+          '-p',
+          prompt,
+          cliConfig.skipPermissions,
+          '--output-format',
+          outputFormat,
+        ]
+
+        if (cliConfig.requiresVerbose && outputFormat === 'stream-json') {
+          args.push('--verbose')
+        }
+
         if (model) {
           args.push('--model', model)
         }
 
-        console.log('[Proxy] Running: codebuddy', args.join(' '))
+        console.log(
+          `[Proxy] Running (${useCliType}):`,
+          cliConfig.path,
+          args.join(' ')
+        )
 
         // 设置响应头
         if (outputFormat === 'stream-json') {
@@ -77,8 +215,8 @@ const server = http.createServer(async (req, res) => {
         }
 
         // 启动子进程
-        console.log('[Proxy] Spawning:', CODEBUDDY_PATH, args)
-        const child = spawn(CODEBUDDY_PATH, args, {
+        console.log('[Proxy] Spawning:', cliConfig.path, args)
+        const child = spawn(cliConfig.path, args, {
           stdio: ['pipe', 'pipe', 'pipe'],
         })
 
@@ -121,8 +259,6 @@ const server = http.createServer(async (req, res) => {
           }
           res.end(JSON.stringify({ error: err.message }))
         })
-
-        // 注意：移除 req.on('close') 因为它可能过早触发
       } catch (err) {
         console.error('[Proxy] Error:', err)
         res.writeHead(500, { 'Content-Type': 'application/json' })
@@ -139,16 +275,28 @@ const server = http.createServer(async (req, res) => {
 })
 
 server.listen(PORT, '127.0.0.1', () => {
+  const claudeAvailable = detectCli('claude')
+  const codebuddyAvailable = detectCli('codebuddy')
+
   console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║   CodeBuddy Proxy Server                                   ║
+║   Claude/CodeBuddy Proxy Server v1.1.0                     ║
 ║                                                            ║
 ║   Endpoint: http://127.0.0.1:${PORT}                          ║
 ║                                                            ║
-║   Available endpoints:                                     ║
-║   - GET  /health     - Health check                        ║
-║   - POST /agent      - Send prompt to CodeBuddy            ║
+║   Current CLI: ${currentCliType.padEnd(42)}║
+║   CLI Path: ${getCurrentCliConfig().path.padEnd(45).slice(0, 45)}║
+║                                                            ║
+║   Available CLIs:                                          ║
+║   - claude:    ${claudeAvailable ? '✓ available' : '✗ not found'}                               ║
+║   - codebuddy: ${codebuddyAvailable ? '✓ available' : '✗ not found'}                               ║
+║                                                            ║
+║   Endpoints:                                               ║
+║   - GET  /health  - Health check + CLI status              ║
+║   - GET  /cli     - Get current CLI config                 ║
+║   - POST /cli     - Switch CLI type                        ║
+║   - POST /agent   - Send prompt to CLI                     ║
 ║                                                            ║
 ║   Press Ctrl+C to stop                                     ║
 ║                                                            ║
