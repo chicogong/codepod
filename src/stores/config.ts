@@ -154,12 +154,28 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
+  async function loadSkills() {
+    isLoading.value = true
+    error.value = null
+    try {
+      const result = await invoke<CommandResult<Skill[]>>('list_skills')
+      if (result.success && result.data) {
+        skills.value = result.data
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to load skills'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function loadAll() {
     await Promise.all([
       loadMcpConfig(),
       loadSettings(),
       loadCommands(),
       loadAgents(),
+      loadSkills(),
     ])
   }
 
@@ -220,6 +236,7 @@ export const useConfigStore = defineStore('config', () => {
     loadSettings,
     loadCommands,
     loadAgents,
+    loadSkills,
     loadAll,
     addSkill,
     removeSkill,

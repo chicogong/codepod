@@ -5,6 +5,7 @@ import { useClaude, useSearch, useKeyboard } from '@/composables'
 import MessageList from './MessageList.vue'
 import ChatInput from './ChatInput.vue'
 import SearchBar from './SearchBar.vue'
+import ExportDialog from './ExportDialog.vue'
 
 const chatStore = useChatStore()
 const {
@@ -21,6 +22,7 @@ const { searchQuery, isSearchOpen, resultCount, closeSearch, toggleSearch } =
 const initError = ref<string | null>(null)
 const isConnecting = ref(false)
 const customApiUrl = ref('http://127.0.0.1:3002')
+const showExportDialog = ref(false)
 
 // 连接状态文本
 const connectionStatusText = computed(() => {
@@ -57,6 +59,20 @@ useKeyboard([
     ctrl: true,
     action: toggleSearch,
     description: 'Search messages',
+  },
+  {
+    key: 'e',
+    meta: true,
+    shift: true,
+    action: () => (showExportDialog.value = true),
+    description: 'Export conversation',
+  },
+  {
+    key: 'e',
+    ctrl: true,
+    shift: true,
+    action: () => (showExportDialog.value = true),
+    description: 'Export conversation',
   },
 ])
 
@@ -143,12 +159,22 @@ async function handleSend(content: string) {
         <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
         Connected: {{ connectionStatusText }}
       </span>
-      <button
-        class="text-green-600 dark:text-green-400 hover:underline"
-        @click="reconnect"
-      >
-        Reconnect
-      </button>
+      <div class="flex items-center gap-3">
+        <button
+          v-if="chatStore.messages.length > 0"
+          class="text-green-600 dark:text-green-400 hover:underline"
+          title="Export (⇧⌘E)"
+          @click="showExportDialog = true"
+        >
+          Export
+        </button>
+        <button
+          class="text-green-600 dark:text-green-400 hover:underline"
+          @click="reconnect"
+        >
+          Reconnect
+        </button>
+      </div>
     </div>
 
     <!-- Messages -->
@@ -164,5 +190,11 @@ async function handleSend(content: string) {
         @send="handleSend"
       />
     </div>
+
+    <!-- Export Dialog -->
+    <ExportDialog
+      :visible="showExportDialog"
+      @close="showExportDialog = false"
+    />
   </div>
 </template>

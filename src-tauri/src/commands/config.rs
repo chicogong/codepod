@@ -64,6 +64,14 @@ pub struct AgentInfo {
     pub enabled: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SkillInfo {
+    pub name: String,
+    pub description: Option<String>,
+    pub content: String,
+    pub enabled: bool,
+}
+
 /// List all commands from ~/.claude/commands/
 #[command]
 pub async fn list_commands() -> CommandResult<Vec<CommandInfo>> {
@@ -142,6 +150,46 @@ pub async fn list_agents() -> CommandResult<Vec<AgentInfo>> {
             CommandResult::ok(agents)
         }
         Err(e) => CommandResult::err(format!("Failed to list agents: {}", e)),
+    }
+}
+
+/// List all skills from ~/.claude/skills/
+#[command]
+pub async fn list_skills() -> CommandResult<Vec<SkillInfo>> {
+    let skills_dir = expand_path("~/.claude/skills");
+    
+    if !skills_dir.exists() {
+        return CommandResult::ok(vec![]);
+    }
+    
+    let mut skills = Vec::new();
+    
+    match fs::read_dir(&skills_dir).await {
+        Ok(mut entries) => {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let path = entry.path();
+                if path.extension().map_or(false, |e| e == "md") {
+                    if let Ok(content) = fs::read_to_string(&path).await {
+                        let name = path.file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("unknown")
+                            .to_string();
+                        
+                        // Parse frontmatter for description
+                        let (description, body) = parse_frontmatter(&content);
+                        
+                        skills.push(SkillInfo {
+                            name,
+                            description,
+                            content: body,
+                            enabled: true,
+                        });
+                    }
+                }
+            }
+            CommandResult::ok(skills)
+        }
+        Err(e) => CommandResult::err(format!("Failed to list skills: {}", e)),
     }
 }
 

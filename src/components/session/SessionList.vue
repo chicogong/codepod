@@ -1,21 +1,79 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useSessionStore, useChatStore } from '@/stores'
+import { useTabsStore } from '@/stores/tabs'
 import type { Session } from '@/types'
 
 const sessionStore = useSessionStore()
 const chatStore = useChatStore()
+const tabsStore = useTabsStore()
 
 const emit = defineEmits<{
   select: [session: Session]
 }>()
 
+// Editing state
+const editingSessionId = ref<string | null>(null)
+const editingTitle = ref('')
+
+// Initialize sessions from storage on mount
+onMounted(() => {
+  sessionStore.init()
+})
+
 function handleSelect(session: Session) {
+  // Save current session before switching
+  chatStore.saveCurrentSession()
+  // Load messages from storage
+  chatStore.loadSessionFromStorage(session.id)
+  // Add or switch to tab
+  tabsStore.addTab(session)
   emit('select', session)
 }
 
 function handleDelete(session: Session, event: Event) {
   event.stopPropagation()
-  sessionStore.removeSession(session.id)
+  if (confirm(`Delete "${session.title}"?`)) {
+    // Close tab if open
+    const tab = tabsStore.tabs.find(t => t.sessionId === session.id)
+    if (tab) {
+      tabsStore.closeTab(tab.id)
+    }
+    sessionStore.removeSession(session.id)
+    // Clear chat if current session was deleted
+    if (chatStore.currentSessionId === session.id) {
+      chatStore.clearMessages()
+    }
+  }
+}
+
+function startEditing(session: Session, event: Event) {
+  event.stopPropagation()
+  editingSessionId.value = session.id
+  editingTitle.value = session.title
+}
+
+function saveEditing() {
+  if (editingSessionId.value && editingTitle.value.trim()) {
+    const newTitle = editingTitle.value.trim()
+    sessionStore.renameSession(editingSessionId.value, newTitle)
+    // Update tab title if session is open in a tab
+    tabsStore.updateTabBySessionId(editingSessionId.value, { title: newTitle })
+  }
+  cancelEditing()
+}
+
+function cancelEditing() {
+  editingSessionId.value = null
+  editingTitle.value = ''
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    saveEditing()
+  } else if (event.key === 'Escape') {
+    cancelEditing()
+  }
 }
 
 function formatDate(date: Date): string {
@@ -56,31 +114,70 @@ function formatDate(date: Date): string {
               @click="handleSelect(session)"
             >
               <div class="flex-1 min-w-0">
-                <p class="truncate font-medium">{{ session.title }}</p>
-                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {{ formatDate(session.updatedAt) }}
-                </p>
+                <!-- Editing mode -->
+                <input
+                  v-if="editingSessionId === session.id"
+                  v-model="editingTitle"
+                  class="w-full px-1 py-0.5 text-sm bg-white dark:bg-gray-800 border border-primary-500 rounded focus:outline-none"
+                  autofocus
+                  @click.stop
+                  @blur="saveEditing"
+                  @keydown="handleKeydown"
+                />
+                <!-- Display mode -->
+                <template v-else>
+                  <p class="truncate font-medium">{{ session.title }}</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {{ formatDate(session.updatedAt) }} ·
+                    {{ session.messageCount }} msgs
+                  </p>
+                </template>
               </div>
-              <!-- Delete Button -->
-              <button
-                class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-opacity"
-                title="Delete session"
-                @click="handleDelete(session, $event)"
+              <!-- Action Buttons -->
+              <div
+                class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <svg
-                  class="w-4 h-4 text-gray-400 hover:text-red-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                <!-- Rename Button -->
+                <button
+                  class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                  title="Rename"
+                  @click="startEditing(session, $event)"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    class="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                </button>
+                <!-- Delete Button -->
+                <button
+                  class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                  title="Delete"
+                  @click="handleDelete(session, $event)"
+                >
+                  <svg
+                    class="w-4 h-4 text-gray-400 hover:text-red-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
             </li>
           </ul>
         </div>

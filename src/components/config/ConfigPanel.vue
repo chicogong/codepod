@@ -4,18 +4,20 @@ import { useConfigStore } from '@/stores'
 import McpServerList from './McpServerList.vue'
 import CommandList from './CommandList.vue'
 import AgentList from './AgentList.vue'
+import SkillList from './SkillList.vue'
 import CliSettings from './CliSettings.vue'
 
 const configStore = useConfigStore()
 
-type TabType = 'cli' | 'mcp' | 'commands' | 'agents'
+type TabType = 'cli' | 'mcp' | 'commands' | 'agents' | 'skills'
 const activeTab = ref<TabType>('cli')
 
 const tabs: { id: TabType; label: string; icon: string }[] = [
   { id: 'cli', label: 'CLI', icon: '⚙️' },
-  { id: 'mcp', label: 'MCP Servers', icon: '🔌' },
-  { id: 'commands', label: 'Commands', icon: '⚡' },
+  { id: 'mcp', label: 'MCP', icon: '🔌' },
+  { id: 'commands', label: 'Cmds', icon: '⚡' },
   { id: 'agents', label: 'Agents', icon: '🤖' },
+  { id: 'skills', label: 'Skills', icon: '🎯' },
 ]
 
 onMounted(() => {
@@ -75,6 +77,7 @@ onMounted(() => {
       <McpServerList v-else-if="activeTab === 'mcp'" />
       <CommandList v-else-if="activeTab === 'commands'" />
       <AgentList v-else-if="activeTab === 'agents'" />
+      <SkillList v-else-if="activeTab === 'skills'" />
     </div>
   </div>
 </template>

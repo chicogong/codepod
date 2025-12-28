@@ -1,9 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import MessageItem from '@/components/chat/MessageItem.vue'
 import type { Message } from '@/types'
 
 describe('MessageItem', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   const createMessage = (overrides: Partial<Message> = {}): Message => ({
     uuid: 'test-uuid',
     parentUuid: null,
@@ -12,6 +17,12 @@ describe('MessageItem', () => {
     timestamp: new Date('2024-01-01T12:00:00'),
     ...overrides,
   })
+
+  // Mock window.confirm
+  vi.stubGlobal(
+    'confirm',
+    vi.fn(() => true)
+  )
 
   describe('user messages', () => {
     it('should render user message with correct styling', () => {

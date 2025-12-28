@@ -1,12 +1,40 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useAppStore } from '@/stores'
+import { ref, onMounted } from 'vue'
+import { useAppStore, useChatStore, useSessionStore } from '@/stores'
+import { useTabsStore } from '@/stores/tabs'
 import Sidebar from './Sidebar.vue'
 import StatusBar from './StatusBar.vue'
+import TabBar from './TabBar.vue'
 import { ConfigPanel } from '@/components/config'
 
 const appStore = useAppStore()
+const chatStore = useChatStore()
+const sessionStore = useSessionStore()
+const tabsStore = useTabsStore()
 const showConfigPanel = ref(false)
+
+// Initialize tabs on mount
+onMounted(() => {
+  tabsStore.loadTabs()
+
+  // If we have a current session but no tabs, create a tab for it
+  if (chatStore.currentSessionId && tabsStore.tabs.length === 0) {
+    const session = sessionStore.sessions.find(
+      s => s.id === chatStore.currentSessionId
+    )
+    if (session) {
+      tabsStore.addTab(session)
+    }
+  }
+
+  // If we have tabs but active tab's session doesn't match current, sync them
+  if (
+    tabsStore.activeTab &&
+    tabsStore.activeTab.sessionId !== chatStore.currentSessionId
+  ) {
+    chatStore.loadSessionFromStorage(tabsStore.activeTab.sessionId)
+  }
+})
 </script>
 
 <template>
@@ -50,6 +78,7 @@ const showConfigPanel = ref(false)
 
       <!-- Chat Area -->
       <main class="flex-1 flex flex-col overflow-hidden">
+        <TabBar />
         <slot />
       </main>
 

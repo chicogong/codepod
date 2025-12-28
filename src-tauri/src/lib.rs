@@ -15,6 +15,7 @@ pub fn run() {
             config::write_config_file,
             config::list_commands,
             config::list_agents,
+            config::list_skills,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

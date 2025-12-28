@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useAppStore, useChatStore } from '@/stores'
 import { useClaude, useProject } from '@/composables'
 import { AVAILABLE_MODELS } from '@/types'
@@ -34,6 +35,30 @@ const connectionModeClass = () => {
       return 'text-red-500'
   }
 }
+
+// Format token count (e.g., 1234 -> "1.2k")
+function formatTokens(count: number): string {
+  if (count < 1000) return count.toString()
+  if (count < 1000000) return (count / 1000).toFixed(1) + 'k'
+  return (count / 1000000).toFixed(2) + 'M'
+}
+
+// Format cost (e.g., 0.0123 -> "$0.01")
+function formatCost(cost: number): string {
+  if (cost < 0.01) return '<$0.01'
+  return '$' + cost.toFixed(2)
+}
+
+const tokenStatsDisplay = computed(() => {
+  const stats = chatStore.tokenStats
+  if (stats.totalTokens === 0) return null
+  return {
+    input: formatTokens(stats.inputTokens),
+    output: formatTokens(stats.outputTokens),
+    total: formatTokens(stats.totalTokens),
+    cost: formatCost(stats.estimatedCost),
+  }
+})
 </script>
 
 <template>
@@ -76,6 +101,35 @@ const connectionModeClass = () => {
       </span>
     </div>
     <div class="flex items-center gap-4">
+      <!-- Token Stats -->
+      <span
+        v-if="tokenStatsDisplay"
+        class="flex items-center gap-1"
+        :title="`Input: ${tokenStatsDisplay.input} | Output: ${tokenStatsDisplay.output} | Est. cost: ${tokenStatsDisplay.cost}`"
+      >
+        <svg
+          class="w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+          />
+        </svg>
+        <span>{{ tokenStatsDisplay.total }}</span>
+        <span class="text-gray-400 dark:text-gray-500"
+          >({{ tokenStatsDisplay.cost }})</span
+        >
+      </span>
+
+      <span v-if="tokenStatsDisplay" class="text-gray-300 dark:text-gray-600"
+        >|</span
+      >
+
       <span v-if="chatStore.isStreaming" class="flex items-center gap-1">
         <span class="animate-pulse text-green-500">●</span>
         Generating...

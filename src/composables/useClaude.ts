@@ -285,9 +285,16 @@ export function useClaude() {
     }
 
     if (message.type === 'result') {
-      // 最终结果，只记录统计信息，不追加内容
-      // result.result 字段通常是对 assistant 消息内容的重复，不需要再次追加
+      // 最终结果，记录统计信息
       console.log('[Claude] Result:', message)
+
+      // 更新 token 统计
+      if (message.usage) {
+        const inputTokens = message.usage.input_tokens || 0
+        const outputTokens = message.usage.output_tokens || 0
+        chatStore.addTokens(inputTokens, outputTokens)
+        console.log('[Claude] Token usage:', { inputTokens, outputTokens })
+      }
     }
   }
 
