@@ -36,29 +36,47 @@
 
 ## Features
 
+### 💬 Chat Mode
 - **Chat Interface** - 流畅的聊天体验，支持流式输出
 - **Session Management** - 会话列表、历史管理、会话持久化、重命名
 - **Multi-tab Dialogs** - 多标签页对话，同时进行多个会话
 - **Message Operations** - 消息编辑、删除、重新生成
-- **Dark Mode** - 支持亮色/暗色主题切换
-- **Claude CLI Integration** - 支持 `claude` 和 `codebuddy` 双 CLI 切换
-- **Project Selector** - 项目文件夹选择和最近项目列表
-- **Keyboard Shortcuts** - 丰富的快捷键支持
 - **Message Search** - 消息搜索和高亮显示
 - **Code Highlighting** - 使用 Shiki 进行代码语法高亮
+- **Export Dialog** - 导出对话为 Markdown/JSON 格式
+- **Token Statistics** - 实时显示 Token 使用量和估算成本
+
+### 🖥️ Terminal Mode (NEW!)
+- **Integrated Terminal** - 基于 xterm.js 的完整终端模拟器
+- **PTY Support** - 真实的伪终端支持，完整 ANSI 转义序列
+- **Multi-terminal Tabs** - 支持多个并发终端会话
+- **Claude CLI Integration** - 直接在终端运行 Claude 命令
+- **Session Resume** - 支持恢复之前的 Claude 会话
+- **Auto-resize** - 终端自动适应窗口大小
+- **Clickable Links** - 终端中的 URL 可点击
+
+### 🎨 UI/UX
+- **Naive UI** - 现代化组件库，提供优秀的交互体验
+- **Dark Mode** - 支持亮色/暗色主题切换
+- **Dual View Mode** - Chat 与 Terminal 视图无缝切换
+- **Project Selector** - 项目文件夹选择和最近项目列表
+- **Keyboard Shortcuts** - 丰富的快捷键支持
+
+### ⚙️ Configuration
+- **Claude CLI Integration** - 支持 `claude` 和 `codebuddy` 双 CLI 切换
 - **MCP Server Management** - 管理 MCP 服务器配置
 - **Commands & Agents** - 查看和管理自定义 Commands 和 Agents
 - **Skills Configuration** - 技能配置和管理
-- **Export Dialog** - 导出对话为 Markdown/JSON 格式
-- **Token Statistics** - 实时显示 Token 使用量和估算成本
 
 ## Tech Stack
 
 | 层级 | 技术 |
 |------|------|
 | **Frontend** | Vue 3 + TypeScript + Pinia |
+| **UI Library** | Naive UI |
+| **Terminal** | xterm.js + portable-pty |
 | **Backend** | Rust (Tauri 2.0) |
-| **Build** | Bun + Vite |
+| **Build** | npm + Vite |
 | **Styling** | Tailwind CSS v4 |
 | **Testing** | Vitest + Vue Test Utils |
 
@@ -95,7 +113,7 @@
 
 ### 环境要求
 
-- [Bun](https://bun.sh/) v1.0+
+- [Node.js](https://nodejs.org/) v18+
 - [Rust](https://www.rust-lang.org/) 1.77+
 - [Tauri CLI](https://v2.tauri.app/start/prerequisites/)
 
@@ -107,28 +125,28 @@ git clone https://github.com/chicogong/codepod.git
 cd codepod
 
 # 安装依赖
-bun install
+npm install
 
 # 开发模式
-bun run tauri:dev
+npm run tauri:dev
 
 # 构建生产版本
-bun run tauri:build
+npm run tauri:build
 ```
 
 ### 常用命令
 
 ```bash
 # 代码检查
-bun run lint          # Lint 并自动修复
-bun run lint:check    # 仅检查
-bun run format        # 格式化代码
-bun run typecheck     # TypeScript 类型检查
+npm run lint          # Lint 并自动修复
+npm run lint:check    # 仅检查
+npm run format        # 格式化代码
+npm run typecheck     # TypeScript 类型检查
 
 # 测试
-bun run test          # 运行测试 (watch mode)
-bun run test:run      # 运行测试 (单次)
-bun run test:coverage # 生成覆盖率报告
+npm run test          # 运行测试 (watch mode)
+npm run test:run      # 运行测试 (单次)
+npm run test:coverage # 生成覆盖率报告
 
 # Rust
 cd src-tauri
@@ -143,6 +161,7 @@ codepod/
 ├── src/                      # Vue frontend
 │   ├── components/
 │   │   ├── chat/            # ChatView, ChatInput, MessageList, MessageItem, SearchBar, CodeBlock, ExportDialog
+│   │   ├── terminal/        # TerminalView (xterm.js 集成)
 │   │   ├── session/         # SessionList
 │   │   ├── project/         # ProjectSelector
 │   │   ├── config/          # ConfigPanel, McpServerList, CommandList, AgentList, SkillList, CliSettings
@@ -150,11 +169,15 @@ codepod/
 │   ├── composables/         # Vue composables (useClaude, useProject, useKeyboard, useSearch, useHighlighter)
 │   ├── services/            # HTTP API service (claudeHttp)
 │   ├── stores/              # Pinia stores (app, chat, session, config, tabs)
-│   └── types/               # TypeScript 类型定义
+│   ├── types/               # TypeScript 类型定义
+│   └── MainView.vue         # 主视图 (Chat/Terminal 切换)
 ├── src-tauri/               # Rust backend
-│   └── src/commands/        # Tauri commands (Claude CLI, Config 集成)
+│   └── src/
+│       ├── commands/        # Tauri commands (Claude CLI, Config 集成)
+│       └── pty.rs           # PTY 终端管理
 ├── scripts/                 # 辅助脚本 (proxy-server.js)
 ├── tests/                   # 测试文件
+├── CLAUDE.md                # 项目架构文档
 └── .github/                 # GitHub 配置 (CI, Issue 模板)
 ```
 
@@ -182,7 +205,7 @@ codepod/
 - [x] Skills 配置
 - [x] 双 CLI 支持 (claude/codebuddy)
 
-### v0.4.0 - Advanced Features (Current)
+### v0.4.0 - Advanced Features
 
 - [x] 会话持久化 (localStorage)
 - [x] 消息编辑与删除
@@ -191,11 +214,22 @@ codepod/
 - [x] 导出对话历史 (Markdown/JSON)
 - [x] Token 使用量统计
 
-### v0.5.0 - Future
+### v0.5.0 - Terminal & UI Enhancement (Current)
 
+- [x] PTY 终端系统
+- [x] xterm.js 集成
+- [x] Naive UI 组件库
+- [x] 双视图模式 (Chat/Terminal)
+- [x] 多终端标签页
+- [x] 终端会话恢复
+
+### v0.6.0 - Future
+
+- [ ] 终端主题自定义
+- [ ] 终端会话持久化
+- [ ] 命令历史记录
+- [ ] 终端搜索功能
 - [ ] 插件系统
-- [ ] 自定义主题
-- [ ] 更多模型支持
 - [ ] 云端同步
 
 ## Contributing
