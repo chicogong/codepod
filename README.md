@@ -34,6 +34,48 @@
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="https://github.com/chicogong/codepod/releases/download/v0.5.0/codepod-window.png" alt="CodePod Screenshot" width="800">
+</p>
+
+<p align="center">
+  <em>CodePod v0.5.0 - Chat & Terminal integrated interface with Naive UI</em>
+</p>
+
+---
+
+## 🎉 What's New in v0.5.0
+
+### 🖥️ **Terminal Support**
+完整的 PTY 终端集成，支持与 Claude CLI 的实时交互！
+- 基于 xterm.js 的全功能终端模拟器
+- 真实的伪终端（PTY）支持，完整 ANSI 转义序列
+- 多终端标签页，同时运行多个会话
+- 支持恢复之前的 Claude 会话（`--resume`）
+- 自动窗口大小调整和可点击链接
+
+### 🎨 **Naive UI 集成**
+全面升级到 Naive UI 组件库，提供更现代、更专业的界面体验！
+- 更好的布局和视觉层次
+- 优化的交互设计
+- 响应式设计，适配不同窗口尺寸
+
+### 📑 **高级特性**
+- **多标签对话**：同时进行多个对话，灵活切换
+- **会话导出**：支持导出为 Markdown 和 JSON 格式
+- **Token 统计**：实时跟踪使用量和估算成本
+- **会话持久化**：所有对话自动保存到 localStorage
+
+### 🔧 **其他改进**
+- 流式输出支持，更流畅的对话体验
+- 模型选择器，快速切换 Claude 模型
+- 双 CLI 支持（claude / codebuddy）
+- 更好的错误处理和恢复机制
+
+---
+
 ## Features
 
 ### 💬 Chat Mode
@@ -99,15 +141,22 @@
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) 已安装并配置
 - macOS 10.15+ / Windows 10+ / Linux
 
-### Download
+### Download Latest Release (v0.5.0)
 
-从 [Releases](https://github.com/chicogong/codepod/releases) 页面下载适合你系统的安装包：
+从 [Releases](https://github.com/chicogong/codepod/releases/latest) 页面下载适合你系统的安装包：
 
-| 平台 | 文件 |
-|------|------|
-| macOS (Universal) | `CodePod_x.x.x_universal.dmg` |
-| Windows | `CodePod_x.x.x_x64-setup.exe` |
-| Linux | `CodePod_x.x.x_amd64.AppImage` |
+#### macOS
+- **Apple Silicon (M1/M2/M3)**: [`CodePod_0.1.0_aarch64.dmg`](https://github.com/chicogong/codepod/releases/download/v0.5.0/CodePod_0.1.0_aarch64.dmg) (推荐)
+- **Alternative**: [`CodePod_aarch64.app.tar.gz`](https://github.com/chicogong/codepod/releases/download/v0.5.0/CodePod_aarch64.app.tar.gz)
+
+#### Windows
+- **Setup Installer**: [`CodePod_0.1.0_x64-setup.exe`](https://github.com/chicogong/codepod/releases/download/v0.5.0/CodePod_0.1.0_x64-setup.exe) (推荐)
+- **MSI Installer**: [`CodePod_0.1.0_x64_en-US.msi`](https://github.com/chicogong/codepod/releases/download/v0.5.0/CodePod_0.1.0_x64_en-US.msi)
+
+#### Linux
+- **AppImage (Universal)**: [`CodePod_0.1.0_amd64.AppImage`](https://github.com/chicogong/codepod/releases/download/v0.5.0/CodePod_0.1.0_amd64.AppImage) (推荐)
+- **Debian/Ubuntu**: [`CodePod_0.1.0_amd64.deb`](https://github.com/chicogong/codepod/releases/download/v0.5.0/CodePod_0.1.0_amd64.deb)
+- **Fedora/RHEL**: [`CodePod-0.1.0-1.x86_64.rpm`](https://github.com/chicogong/codepod/releases/download/v0.5.0/CodePod-0.1.0-1.x86_64.rpm)
 
 ## Development
 
