@@ -21,7 +21,7 @@ function handleNewChat() {
   // 清空当前消息
   chatStore.clearMessages()
   // 创建新 session
-  const session = sessionStore.createSession('New Chat')
+  const session = sessionStore.createSession()
   // 设置当前 session
   chatStore.setCurrentSessionId(session.id)
   // 添加到 tabs

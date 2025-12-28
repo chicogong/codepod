@@ -34,7 +34,7 @@ export interface AgentRequest {
 
 // 流式消息类型
 export interface StreamMessage {
-  type: 'system' | 'user' | 'assistant' | 'result'
+  type: 'system' | 'user' | 'assistant' | 'result' | 'stream_event'
   subtype?: 'init' | 'result'
   session_id?: string
   message?: {
