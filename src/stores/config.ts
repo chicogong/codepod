@@ -8,6 +8,8 @@ import type {
   Skill,
   Command,
   Agent,
+  McpTool,
+  McpToolCall,
 } from '@/types/config'
 
 interface CommandResult<T> {
@@ -23,6 +25,8 @@ export const useConfigStore = defineStore('config', () => {
   const skills = ref<Skill[]>([])
   const commands = ref<Command[]>([])
   const agents = ref<Agent[]>([])
+  const mcpTools = ref<McpTool[]>([])
+  const mcpToolCalls = ref<McpToolCall[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -225,6 +229,58 @@ export const useConfigStore = defineStore('config', () => {
     agents.value = agents.value.filter(a => a.name !== name)
   }
 
+  // MCP Tools
+  function setMcpTools(tools: McpTool[]) {
+    mcpTools.value = tools
+  }
+
+  function addMcpToolCall(
+    call: Omit<McpToolCall, 'id' | 'timestamp' | 'status'>
+  ) {
+    const newCall: McpToolCall = {
+      ...call,
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      status: 'pending',
+    }
+    mcpToolCalls.value.unshift(newCall)
+    // Keep only last 100 calls
+    if (mcpToolCalls.value.length > 100) {
+      mcpToolCalls.value = mcpToolCalls.value.slice(0, 100)
+    }
+    return newCall.id
+  }
+
+  function updateMcpToolCall(
+    id: string,
+    updates: Partial<
+      Pick<McpToolCall, 'output' | 'error' | 'duration' | 'status'>
+    >
+  ) {
+    const call = mcpToolCalls.value.find(c => c.id === id)
+    if (call) {
+      Object.assign(call, updates)
+    }
+  }
+
+  function clearMcpToolCalls() {
+    mcpToolCalls.value = []
+  }
+
+  // Computed for tool calls
+  const recentToolCalls = computed(() => mcpToolCalls.value.slice(0, 20))
+
+  const toolCallsByServer = computed(() => {
+    const grouped: Record<string, McpToolCall[]> = {}
+    for (const call of mcpToolCalls.value) {
+      if (!grouped[call.serverName]) {
+        grouped[call.serverName] = []
+      }
+      grouped[call.serverName].push(call)
+    }
+    return grouped
+  })
+
   return {
     // State
     mcpConfig,
@@ -232,6 +288,8 @@ export const useConfigStore = defineStore('config', () => {
     skills,
     commands,
     agents,
+    mcpTools,
+    mcpToolCalls,
     isLoading,
     error,
 
@@ -241,6 +299,8 @@ export const useConfigStore = defineStore('config', () => {
     enabledSkills,
     enabledCommands,
     enabledAgents,
+    recentToolCalls,
+    toolCallsByServer,
 
     // Actions
     loadMcpConfig,
@@ -260,5 +320,9 @@ export const useConfigStore = defineStore('config', () => {
     removeCommand,
     addAgent,
     removeAgent,
+    setMcpTools,
+    addMcpToolCall,
+    updateMcpToolCall,
+    clearMcpToolCalls,
   }
 })

@@ -54,6 +54,11 @@ vi.mock('naive-ui', () => ({
               { 'data-tab': 'git', onClick: () => emit('update:value', 'git') },
               'Git'
             ),
+            h(
+              'button',
+              { 'data-tab': 'mcp', onClick: () => emit('update:value', 'mcp') },
+              'MCP'
+            ),
           ]),
           slots.default?.(),
         ])
@@ -215,6 +220,26 @@ vi.mock('naive-ui', () => ({
           h('div', { class: 'n-collapse-item-header' }, props.title as string),
           slots.default?.(),
         ])
+    },
+  },
+  NScrollbar: {
+    name: 'NScrollbar',
+    props: ['xScrollable'],
+    setup(
+      _props: Record<string, unknown>,
+      { slots }: { slots: Record<string, () => unknown> }
+    ) {
+      return () => h('div', { class: 'n-scrollbar' }, slots.default?.())
+    },
+  },
+  NText: {
+    name: 'NText',
+    props: ['depth'],
+    setup(
+      _props: Record<string, unknown>,
+      { slots }: { slots: Record<string, () => unknown> }
+    ) {
+      return () => h('span', { class: 'n-text' }, slots.default?.())
     },
   },
 }))

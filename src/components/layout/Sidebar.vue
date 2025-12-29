@@ -5,12 +5,14 @@ import {
   ChatbubblesOutline,
   FolderOutline,
   GitBranchOutline,
+  BuildOutline,
 } from '@vicons/ionicons5'
 import { useChatStore, useSessionStore, useAppStore } from '@/stores'
 import { useTabsStore } from '@/stores/tabs'
 import { SessionList } from '@/components/session'
 import FileExplorer from '@/components/explorer/FileExplorer.vue'
 import GitStatus from '@/components/explorer/GitStatus.vue'
+import { McpToolsPanel } from '@/components/mcp'
 import type { Session, FileEntry } from '@/types'
 
 defineProps<{
@@ -156,6 +158,18 @@ function handleFileOpen(file: FileEntry) {
             >
               Select a project folder to view git status
             </div>
+          </div>
+        </NTabPane>
+
+        <NTabPane name="mcp">
+          <template #tab>
+            <div class="tab-label">
+              <NIcon :component="BuildOutline" size="16" />
+              <span class="hidden sm:inline">MCP</span>
+            </div>
+          </template>
+          <div class="h-full overflow-auto">
+            <McpToolsPanel />
           </div>
         </NTabPane>
       </NTabs>

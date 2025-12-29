@@ -27,6 +27,15 @@ import Sidebar from './Sidebar.vue'
 import StatusBar from './StatusBar.vue'
 import TabBar from './TabBar.vue'
 import { ConfigPanel } from '@/components/config'
+import CommandPalette from '@/components/common/CommandPalette.vue'
+import ModelSelector from '@/components/common/ModelSelector.vue'
+import SessionSearchModal from '@/components/chat/SessionSearchModal.vue'
+import {
+  useKeyboard,
+  showCommandPalette,
+  showSessionSearch,
+  showModelSelector,
+} from '@/composables/useKeyboard'
 
 const appStore = useAppStore()
 const chatStore = useChatStore()
@@ -34,6 +43,9 @@ const sessionStore = useSessionStore()
 const tabsStore = useTabsStore()
 const showConfigPanel = ref(false)
 const sidebarCollapsed = ref(false)
+
+// Initialize keyboard shortcuts
+useKeyboard()
 
 // Initialize tabs on mount
 onMounted(() => {
@@ -71,6 +83,12 @@ function handleProjectSelect(key: string) {
   if (key === 'open') {
     // TODO: Open project dialog
   }
+}
+
+// Handle search in current session
+function handleOpenSearch() {
+  // TODO: Open search in current session (will be implemented in ChatView)
+  console.log('Open search in current session')
 }
 
 // Import h for rendering icons in dropdown
@@ -207,6 +225,21 @@ import { h } from 'vue'
         <ConfigPanel />
       </NDrawerContent>
     </NDrawer>
+
+    <!-- Command Palette -->
+    <CommandPalette
+      v-model:show="showCommandPalette"
+      @open-settings="showConfigPanel = true"
+      @open-search="handleOpenSearch"
+      @open-session-search="showSessionSearch = true"
+      @switch-model="showModelSelector = true"
+    />
+
+    <!-- Model Selector -->
+    <ModelSelector v-model:show="showModelSelector" />
+
+    <!-- Session Search Modal -->
+    <SessionSearchModal v-model:show="showSessionSearch" />
   </NLayout>
 </template>
 

@@ -1,5 +1,30 @@
 // Claude Code Configuration Types
 
+// MCP Tool Definition
+export interface McpTool {
+  name: string
+  description?: string
+  inputSchema?: {
+    type: string
+    properties?: Record<string, unknown>
+    required?: string[]
+  }
+  serverName: string
+}
+
+// MCP Tool Call History
+export interface McpToolCall {
+  id: string
+  toolName: string
+  serverName: string
+  input: Record<string, unknown>
+  output?: string
+  error?: string
+  timestamp: Date
+  duration?: number
+  status: 'pending' | 'success' | 'error'
+}
+
 // MCP Server Types
 export interface McpServerBase {
   type?: 'stdio' | 'http' | 'sse'
