@@ -71,6 +71,9 @@ coverage/
 .nyc_output/
 *.lcov
 .vitest/
+test-results/
+playwright-report/
+playwright/.cache/
 
 # ============================================
 # Environment
