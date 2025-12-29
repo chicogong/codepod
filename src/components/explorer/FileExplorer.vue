@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, h } from 'vue'
 import { NTree, NIcon, NSpin, NEmpty, NButton, NTooltip } from 'naive-ui'
+import type { TreeOption } from 'naive-ui'
 import {
   FolderOutline,
   FolderOpenOutline,
@@ -45,8 +46,8 @@ const getFileIcon = (entry: FileEntry) => {
   return DocumentOutline
 }
 
-// Convert entries to tree nodes
-const treeData = computed<FileTreeNode[]>(() => {
+// Convert entries to tree nodes (as TreeOption for NTree compatibility)
+const treeData = computed<TreeOption[]>(() => {
   const filtered = props.showHidden
     ? entries.value
     : entries.value.filter(e => !e.is_hidden)
@@ -94,36 +95,38 @@ async function loadDirectory(path: string) {
 }
 
 // Handle node selection
-function handleSelect(keys: string[], option: FileTreeNode[]) {
+function handleSelect(keys: string[], option: (TreeOption | null)[]) {
   selectedKeys.value = keys
   if (option.length > 0) {
-    const node = option[0]
-    emit('select', {
-      name: node.label,
-      path: node.path,
-      is_dir: node.isDir,
-      is_file: node.isFile,
-      is_hidden: node.isHidden,
-      extension: node.extension,
-      size: node.size,
-    })
+    const node = option[0] as FileTreeNode | null
+    if (node) {
+      emit('select', {
+        name: node.label as string,
+        path: node.path,
+        is_dir: node.isDir,
+        is_file: node.isFile,
+        is_hidden: node.isHidden,
+        extension: node.extension,
+        size: node.size,
+      })
+    }
   }
 }
 
 // Handle node expand (for directories)
-async function handleExpand(keys: string[], _option: FileTreeNode[]) {
+async function handleExpand(keys: string[], _option: (TreeOption | null)[]) {
   expandedKeys.value = keys
   // Could load subdirectory contents here for lazy loading
 }
 
 // Handle double click to open file
-function handleNodeProps(info: { option: FileTreeNode }) {
+const handleNodeProps = (info: { option: TreeOption }) => {
+  const node = info.option as unknown as FileTreeNode
   return {
     ondblclick: () => {
-      const node = info.option
       if (node.isFile) {
         emit('open', {
-          name: node.label,
+          name: node.label as string,
           path: node.path,
           is_dir: node.isDir,
           is_file: node.isFile,

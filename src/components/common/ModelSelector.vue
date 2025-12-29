@@ -76,12 +76,14 @@ function handleKeyDown(event: KeyboardEvent) {
       selectedIndex.value =
         (selectedIndex.value - 1 + totalModels) % totalModels
       break
-    case 'Enter':
+    case 'Enter': {
       event.preventDefault()
-      if (filteredModels.value[selectedIndex.value]) {
-        selectModel(filteredModels.value[selectedIndex.value].id)
+      const selectedModel = filteredModels.value[selectedIndex.value]
+      if (selectedModel) {
+        selectModel(selectedModel.id)
       }
       break
+    }
     case 'Escape':
       event.preventDefault()
       close()
@@ -90,11 +92,12 @@ function handleKeyDown(event: KeyboardEvent) {
 }
 
 // Get model provider badge color
-function getProviderColor(modelId: string): string {
+function getProviderColor(
+  modelId: string
+): 'warning' | 'info' | 'success' | 'default' {
   if (modelId.includes('claude')) return 'warning'
   if (modelId.includes('gemini')) return 'info'
   if (modelId.includes('gpt')) return 'success'
-  if (modelId.includes('deepseek')) return 'default'
   return 'default'
 }
 

@@ -96,12 +96,14 @@ function handleKeyDown(event: KeyboardEvent) {
       selectedIndex.value =
         (selectedIndex.value - 1 + totalResults) % totalResults
       break
-    case 'Enter':
+    case 'Enter': {
       event.preventDefault()
-      if (results.value[selectedIndex.value]) {
-        navigateToResult(results.value[selectedIndex.value])
+      const selectedResult = results.value[selectedIndex.value]
+      if (selectedResult) {
+        navigateToResult(selectedResult)
       }
       break
+    }
     case 'Escape':
       event.preventDefault()
       close()

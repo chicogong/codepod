@@ -276,7 +276,7 @@ export const useConfigStore = defineStore('config', () => {
       if (!grouped[call.serverName]) {
         grouped[call.serverName] = []
       }
-      grouped[call.serverName].push(call)
+      grouped[call.serverName]!.push(call)
     }
     return grouped
   })

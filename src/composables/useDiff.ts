@@ -88,7 +88,7 @@ export function useDiff() {
   }
 
   // Apply changes: accept all additions, remove all deletions
-  function applyChanges(oldText: string, newText: string): string {
+  function applyChanges(_oldText: string, newText: string): string {
     return newText
   }
 

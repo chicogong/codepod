@@ -63,7 +63,7 @@ function handleRejectAll() {
 // Toggle line selection
 function toggleLineSelection(index: number) {
   const line = diffResult.value.lines[index]
-  if (line.type === 'unchanged') return
+  if (!line || line.type === 'unchanged') return
 
   if (selectedLines.value.has(index)) {
     selectedLines.value.delete(index)

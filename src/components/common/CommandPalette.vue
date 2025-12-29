@@ -153,7 +153,10 @@ const groupedCommands = computed(() => {
     settings: [],
   }
   filteredCommands.value.forEach(cmd => {
-    groups[cmd.category].push(cmd)
+    const categoryArray = groups[cmd.category]
+    if (categoryArray) {
+      categoryArray.push(cmd)
+    }
   })
   return groups
 })
@@ -199,12 +202,14 @@ function handleKeyDown(event: KeyboardEvent) {
       selectedIndex.value =
         (selectedIndex.value - 1 + totalCommands) % totalCommands
       break
-    case 'Enter':
+    case 'Enter': {
       event.preventDefault()
-      if (filteredCommands.value[selectedIndex.value]) {
-        executeCommand(filteredCommands.value[selectedIndex.value])
+      const selectedCmd = filteredCommands.value[selectedIndex.value]
+      if (selectedCmd) {
+        executeCommand(selectedCmd)
       }
       break
+    }
     case 'Escape':
       event.preventDefault()
       close()
@@ -228,7 +233,8 @@ function getGlobalIndex(category: string, localIndex: number): number {
     if (cat === category) {
       return globalIndex + localIndex
     }
-    globalIndex += groupedCommands.value[cat].length
+    const catCommands = groupedCommands.value[cat]
+    globalIndex += catCommands ? catCommands.length : 0
   }
   return globalIndex
 }
@@ -261,12 +267,12 @@ function getGlobalIndex(category: string, localIndex: number): number {
           :key="category"
         >
           <div
-            v-if="groupedCommands[category].length > 0"
+            v-if="(groupedCommands[category] ?? []).length > 0"
             class="command-group"
           >
             <div class="group-label">{{ getCategoryLabel(category) }}</div>
             <div
-              v-for="(command, index) in groupedCommands[category]"
+              v-for="(command, index) in groupedCommands[category] ?? []"
               :key="command.id"
               :class="[
                 'command-item',

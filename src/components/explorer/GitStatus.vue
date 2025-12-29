@@ -56,11 +56,11 @@ const groupedFiles = computed(() => {
 
   for (const file of gitStatus.value.files) {
     if (file.status === '?') {
-      groups.untracked.push(file)
+      groups.untracked!.push(file)
     } else if (file.staged) {
-      groups.staged.push(file)
+      groups.staged!.push(file)
     } else {
-      groups.unstaged.push(file)
+      groups.unstaged!.push(file)
     }
   }
 

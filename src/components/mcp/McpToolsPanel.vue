@@ -35,7 +35,7 @@ const toolsByServer = computed(() => {
     if (!grouped[tool.serverName]) {
       grouped[tool.serverName] = []
     }
-    grouped[tool.serverName].push(tool)
+    grouped[tool.serverName]!.push(tool)
   }
   return grouped
 })
