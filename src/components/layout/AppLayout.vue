@@ -312,4 +312,34 @@ import { h } from 'vue'
   flex: 1;
   min-height: 0;
 }
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  .logo-text {
+    font-size: 14px;
+  }
+
+  .project-name {
+    max-width: 100px;
+  }
+
+  .header-center {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-logo {
+    display: none;
+  }
+
+  .project-name {
+    max-width: 80px;
+  }
+}
 </style>

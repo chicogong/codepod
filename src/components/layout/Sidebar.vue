@@ -1,8 +1,17 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+import { NTabs, NTabPane, NIcon } from 'naive-ui'
+import {
+  ChatbubblesOutline,
+  FolderOutline,
+  GitBranchOutline,
+} from '@vicons/ionicons5'
 import { useChatStore, useSessionStore, useAppStore } from '@/stores'
 import { useTabsStore } from '@/stores/tabs'
 import { SessionList } from '@/components/session'
-import type { Session } from '@/types'
+import FileExplorer from '@/components/explorer/FileExplorer.vue'
+import GitStatus from '@/components/explorer/GitStatus.vue'
+import type { Session, FileEntry } from '@/types'
 
 defineProps<{
   width: number
@@ -10,12 +19,20 @@ defineProps<{
 
 const emit = defineEmits<{
   showConfig: []
+  fileSelect: [file: FileEntry]
+  fileOpen: [file: FileEntry]
 }>()
 
 const chatStore = useChatStore()
 const sessionStore = useSessionStore()
 const tabsStore = useTabsStore()
 const appStore = useAppStore()
+
+// Active tab in sidebar
+const activeTab = ref('sessions')
+
+// Current project path for file explorer
+const projectPath = computed(() => appStore.projectPath)
 
 function handleNewChat() {
   // 清空当前消息
@@ -40,11 +57,19 @@ function handleSelectSession(session: Session) {
   // 切换到 Chat 视图
   appStore.setViewMode('chat')
 }
+
+function handleFileSelect(file: FileEntry) {
+  emit('fileSelect', file)
+}
+
+function handleFileOpen(file: FileEntry) {
+  emit('fileOpen', file)
+}
 </script>
 
 <template>
   <aside
-    class="flex flex-col border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+    class="sidebar flex flex-col border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
     :style="{ width: `${width}px` }"
   >
     <!-- New Chat Button -->
@@ -70,8 +95,71 @@ function handleSelectSession(session: Session) {
       </button>
     </div>
 
-    <!-- Session List -->
-    <SessionList class="flex-1 overflow-hidden" @select="handleSelectSession" />
+    <!-- Tabbed Content -->
+    <div class="flex-1 overflow-hidden flex flex-col">
+      <NTabs
+        v-model:value="activeTab"
+        type="line"
+        size="small"
+        justify-content="space-evenly"
+        class="sidebar-tabs"
+      >
+        <NTabPane name="sessions">
+          <template #tab>
+            <div class="tab-label">
+              <NIcon :component="ChatbubblesOutline" size="16" />
+              <span class="hidden sm:inline">Sessions</span>
+            </div>
+          </template>
+          <SessionList
+            class="h-full overflow-hidden"
+            @select="handleSelectSession"
+          />
+        </NTabPane>
+
+        <NTabPane name="files">
+          <template #tab>
+            <div class="tab-label">
+              <NIcon :component="FolderOutline" size="16" />
+              <span class="hidden sm:inline">Files</span>
+            </div>
+          </template>
+          <div class="h-full overflow-hidden">
+            <FileExplorer
+              v-if="projectPath"
+              :root-path="projectPath"
+              :show-hidden="false"
+              @select="handleFileSelect"
+              @open="handleFileOpen"
+            />
+            <div
+              v-else
+              class="flex items-center justify-center h-full text-gray-500 text-sm p-4 text-center"
+            >
+              Select a project folder to browse files
+            </div>
+          </div>
+        </NTabPane>
+
+        <NTabPane name="git">
+          <template #tab>
+            <div class="tab-label">
+              <NIcon :component="GitBranchOutline" size="16" />
+              <span class="hidden sm:inline">Git</span>
+            </div>
+          </template>
+          <div class="h-full overflow-auto">
+            <GitStatus v-if="projectPath" :path="projectPath" />
+            <div
+              v-else
+              class="flex items-center justify-center h-full text-gray-500 text-sm p-4 text-center"
+            >
+              Select a project folder to view git status
+            </div>
+          </div>
+        </NTabPane>
+      </NTabs>
+    </div>
 
     <!-- Config Button -->
     <div class="p-3 border-t border-gray-200 dark:border-gray-700">
@@ -103,3 +191,46 @@ function handleSelectSession(session: Session) {
     </div>
   </aside>
 </template>
+
+<style scoped>
+.sidebar {
+  min-width: 200px;
+}
+
+.sidebar-tabs {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-tabs :deep(.n-tabs-nav) {
+  padding: 0 8px;
+}
+
+.sidebar-tabs :deep(.n-tabs-pane-wrapper) {
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar-tabs :deep(.n-tab-pane) {
+  height: 100%;
+  padding: 0;
+}
+
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Responsive: hide text on smaller screens */
+@media (max-width: 768px) {
+  .sidebar {
+    min-width: 60px;
+  }
+
+  .tab-label span {
+    display: none;
+  }
+}
+</style>

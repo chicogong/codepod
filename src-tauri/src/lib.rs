@@ -1,7 +1,7 @@
 mod commands;
 mod pty;
 
-use commands::{claude, config};
+use commands::{claude, config, fs, git};
 use pty::{
     create_pty_session, write_to_pty, resize_pty, 
     close_pty_session, list_pty_sessions, create_claude_pty
@@ -28,6 +28,15 @@ pub fn run() {
             close_pty_session,
             list_pty_sessions,
             create_claude_pty,
+            // File system commands
+            fs::list_directory,
+            fs::read_file_content,
+            fs::get_file_info,
+            // Git commands
+            git::get_git_status,
+            git::get_git_branch,
+            git::list_git_branches,
+            git::get_git_log,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

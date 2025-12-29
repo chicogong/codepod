@@ -1,13 +1,27 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { NIcon, NTooltip } from 'naive-ui'
+import { GitBranchOutline } from '@vicons/ionicons5'
+import { invoke } from '@tauri-apps/api/core'
 import { useAppStore, useChatStore } from '@/stores'
 import { useClaude, useProject } from '@/composables'
 import { AVAILABLE_MODELS } from '@/types'
+
+interface CommandResult<T> {
+  success: boolean
+  data?: T
+  error?: string
+}
 
 const appStore = useAppStore()
 const chatStore = useChatStore()
 const { selectProject } = useProject()
 const { connectionMode, isInitialized } = useClaude()
+
+// Git branch state
+const gitBranch = ref<string | null>(null)
+const gitAhead = ref(0)
+const gitBehind = ref(0)
 
 const currentModelName = () => {
   const model = AVAILABLE_MODELS.find(m => m.id === chatStore.currentModel)
@@ -59,13 +73,70 @@ const tokenStatsDisplay = computed(() => {
     cost: formatCost(stats.estimatedCost),
   }
 })
+
+// Load git status
+async function loadGitStatus() {
+  const path = appStore.projectPath
+  if (!path) {
+    gitBranch.value = null
+    gitAhead.value = 0
+    gitBehind.value = 0
+    return
+  }
+
+  try {
+    const result = await invoke<
+      CommandResult<{
+        is_repo: boolean
+        branch?: string
+        ahead: number
+        behind: number
+      }>
+    >('get_git_status', { path })
+
+    if (result.success && result.data?.is_repo) {
+      gitBranch.value = result.data.branch || null
+      gitAhead.value = result.data.ahead
+      gitBehind.value = result.data.behind
+    } else {
+      gitBranch.value = null
+      gitAhead.value = 0
+      gitBehind.value = 0
+    }
+  } catch {
+    gitBranch.value = null
+  }
+}
+
+// Git sync indicator
+const gitSyncText = computed(() => {
+  const parts: string[] = []
+  if (gitAhead.value > 0) parts.push(`↑${gitAhead.value}`)
+  if (gitBehind.value > 0) parts.push(`↓${gitBehind.value}`)
+  return parts.join(' ')
+})
+
+// Watch for project path changes
+watch(
+  () => appStore.projectPath,
+  () => {
+    loadGitStatus()
+  }
+)
+
+// Load on mount
+onMounted(() => {
+  loadGitStatus()
+  // Refresh every 30 seconds
+  setInterval(loadGitStatus, 30000)
+})
 </script>
 
 <template>
   <footer
     class="flex items-center justify-between h-7 px-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
   >
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
       <!-- Project Selector -->
       <button
         class="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
@@ -88,6 +159,24 @@ const tokenStatsDisplay = computed(() => {
         <span class="max-w-32 truncate">{{ appStore.projectName }}</span>
       </button>
 
+      <!-- Git Branch -->
+      <NTooltip v-if="gitBranch" trigger="hover">
+        <template #trigger>
+          <div class="flex items-center gap-1 text-purple-500">
+            <NIcon :component="GitBranchOutline" size="14" />
+            <span class="max-w-24 truncate">{{ gitBranch }}</span>
+            <span v-if="gitSyncText" class="text-yellow-500 text-[10px]">
+              {{ gitSyncText }}
+            </span>
+          </div>
+        </template>
+        <div>
+          <div>Branch: {{ gitBranch }}</div>
+          <div v-if="gitAhead > 0">{{ gitAhead }} commit(s) ahead</div>
+          <div v-if="gitBehind > 0">{{ gitBehind }} commit(s) behind</div>
+        </div>
+      </NTooltip>
+
       <span class="text-gray-300 dark:text-gray-600">|</span>
 
       <!-- Model -->
@@ -100,7 +189,7 @@ const tokenStatsDisplay = computed(() => {
         {{ connectionModeText() }}
       </span>
     </div>
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
       <!-- Token Stats -->
       <span
         v-if="tokenStatsDisplay"
