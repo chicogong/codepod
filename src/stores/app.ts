@@ -4,6 +4,12 @@ import type { Project } from '@/types'
 
 export type ViewMode = 'chat' | 'terminal'
 
+export interface AutoCheckpointConfig {
+  enabled: boolean
+  messageInterval: number // Create checkpoint every N messages
+  namePrefix: string // Prefix for auto-checkpoint names
+}
+
 export const useAppStore = defineStore('app', () => {
   // State
   const currentProject = ref<Project | null>(null)
@@ -12,6 +18,13 @@ export const useAppStore = defineStore('app', () => {
   const sidebarWidth = ref(260)
   const isSidebarCollapsed = ref(false)
   const viewMode = ref<ViewMode>('chat')
+
+  // Auto-checkpoint configuration
+  const autoCheckpointConfig = ref<AutoCheckpointConfig>({
+    enabled: true,
+    messageInterval: 10,
+    namePrefix: '自动检查点',
+  })
 
   // Getters
   const projectName = computed(() => {
@@ -60,6 +73,17 @@ export const useAppStore = defineStore('app', () => {
     viewMode.value = mode
   }
 
+  function setAutoCheckpointConfig(config: Partial<AutoCheckpointConfig>) {
+    autoCheckpointConfig.value = {
+      ...autoCheckpointConfig.value,
+      ...config,
+    }
+    localStorage.setItem(
+      'autoCheckpointConfig',
+      JSON.stringify(autoCheckpointConfig.value)
+    )
+  }
+
   function loadPersistedState() {
     // Load dark mode
     const savedDarkMode = localStorage.getItem('darkMode')
@@ -83,6 +107,18 @@ export const useAppStore = defineStore('app', () => {
         recentProjects.value = []
       }
     }
+
+    // Load auto-checkpoint config
+    const savedAutoCheckpointConfig = localStorage.getItem(
+      'autoCheckpointConfig'
+    )
+    if (savedAutoCheckpointConfig) {
+      try {
+        autoCheckpointConfig.value = JSON.parse(savedAutoCheckpointConfig)
+      } catch {
+        // Use default values
+      }
+    }
   }
 
   return {
@@ -93,6 +129,7 @@ export const useAppStore = defineStore('app', () => {
     sidebarWidth,
     isSidebarCollapsed,
     viewMode,
+    autoCheckpointConfig,
 
     // Getters
     projectName,
@@ -103,6 +140,7 @@ export const useAppStore = defineStore('app', () => {
     toggleDarkMode,
     toggleSidebar,
     setViewMode,
+    setAutoCheckpointConfig,
     loadPersistedState,
   }
 })

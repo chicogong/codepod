@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, shallowRef } from 'vue'
 import type { Message, ContentBlock, ModelId } from '@/types'
 import { useSessionStore } from './session'
+import { useAppStore } from './app'
 
 // Token statistics interface
 export interface TokenStats {
@@ -39,6 +40,9 @@ export const useChatStore = defineStore('chat', () => {
   // Token tracking
   const sessionInputTokens = ref(0)
   const sessionOutputTokens = ref(0)
+
+  // Auto-checkpoint tracking
+  const lastAutoCheckpointMessageCount = ref(0)
 
   // Getters
   const lastMessage = computed(() =>
@@ -102,6 +106,43 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  // Auto-checkpoint logic
+  function checkAndCreateAutoCheckpoint() {
+    if (!currentSessionId.value || messages.value.length === 0) {
+      return
+    }
+
+    const appStore = useAppStore()
+    const config = appStore.autoCheckpointConfig
+
+    if (!config.enabled) {
+      return
+    }
+
+    const messagesSinceLastCheckpoint =
+      messages.value.length - lastAutoCheckpointMessageCount.value
+
+    if (messagesSinceLastCheckpoint >= config.messageInterval) {
+      const sessionStore = useSessionStore()
+      const checkpointNumber = Math.floor(
+        messages.value.length / config.messageInterval
+      )
+      const checkpointName = `${config.namePrefix} ${checkpointNumber}`
+
+      try {
+        sessionStore.createCheckpoint(
+          currentSessionId.value,
+          checkpointName,
+          messages.value,
+          `在 ${messages.value.length} 条消息时自动创建`
+        )
+        lastAutoCheckpointMessageCount.value = messages.value.length
+      } catch (error) {
+        console.error('Failed to create auto-checkpoint:', error)
+      }
+    }
+  }
+
   // Actions
   function addUserMessage(content: string): Message {
     const message: Message = {
@@ -127,6 +168,8 @@ export const useChatStore = defineStore('chat', () => {
     }
     messages.value.push(message)
     saveCurrentSession()
+    // Check if we should create an auto-checkpoint
+    checkAndCreateAutoCheckpoint()
     return message
   }
 
@@ -171,6 +214,8 @@ export const useChatStore = defineStore('chat', () => {
     // Reset token counters
     sessionInputTokens.value = 0
     sessionOutputTokens.value = 0
+    // Reset auto-checkpoint counter
+    lastAutoCheckpointMessageCount.value = 0
   }
 
   function setModel(model: ModelId) {
@@ -198,6 +243,12 @@ export const useChatStore = defineStore('chat', () => {
     currentSessionId.value = sessionId
     messages.value = sessionMessages
     error.value = null
+    // Reset auto-checkpoint counter for loaded session
+    lastAutoCheckpointMessageCount.value = 0
+  }
+
+  function setMessages(newMessages: Message[]) {
+    messages.value = newMessages
   }
 
   // Load session from storage
@@ -291,6 +342,7 @@ export const useChatStore = defineStore('chat', () => {
     clearMessages,
     setModel,
     loadSession,
+    setMessages,
     loadSessionFromStorage,
     createAbortController,
     stopStreaming,

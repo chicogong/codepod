@@ -317,6 +317,119 @@ pub fn get_git_log(path: String, count: Option<u32>) -> CommandResult<Vec<GitCom
     }
 }
 
+/// Stage all changes
+#[tauri::command]
+pub fn git_stage_all(path: String) -> CommandResult<()> {
+    let dir_path = Path::new(&path);
+
+    if !dir_path.exists() || !is_git_repo(dir_path) {
+        return CommandResult::err("Not a git repository".to_string());
+    }
+
+    let output = Command::new("git")
+        .args(["add", "-A"])
+        .current_dir(dir_path)
+        .output();
+
+    match output {
+        Ok(o) if o.status.success() => CommandResult::ok(()),
+        Ok(o) => CommandResult::err(String::from_utf8_lossy(&o.stderr).to_string()),
+        Err(e) => CommandResult::err(e.to_string()),
+    }
+}
+
+/// Unstage all changes
+#[tauri::command]
+pub fn git_unstage_all(path: String) -> CommandResult<()> {
+    let dir_path = Path::new(&path);
+
+    if !dir_path.exists() || !is_git_repo(dir_path) {
+        return CommandResult::err("Not a git repository".to_string());
+    }
+
+    let output = Command::new("git")
+        .args(["reset", "HEAD"])
+        .current_dir(dir_path)
+        .output();
+
+    match output {
+        Ok(o) if o.status.success() => CommandResult::ok(()),
+        Ok(o) => CommandResult::err(String::from_utf8_lossy(&o.stderr).to_string()),
+        Err(e) => CommandResult::err(e.to_string()),
+    }
+}
+
+/// Commit staged changes
+#[tauri::command]
+pub fn git_commit(path: String, message: String) -> CommandResult<()> {
+    let dir_path = Path::new(&path);
+
+    if !dir_path.exists() || !is_git_repo(dir_path) {
+        return CommandResult::err("Not a git repository".to_string());
+    }
+
+    if message.trim().is_empty() {
+        return CommandResult::err("Commit message cannot be empty".to_string());
+    }
+
+    let output = Command::new("git")
+        .args(["commit", "-m", &message])
+        .current_dir(dir_path)
+        .output();
+
+    match output {
+        Ok(o) if o.status.success() => CommandResult::ok(()),
+        Ok(o) => {
+            let stderr = String::from_utf8_lossy(&o.stderr).to_string();
+            let stdout = String::from_utf8_lossy(&o.stdout).to_string();
+            CommandResult::err(if stderr.is_empty() { stdout } else { stderr })
+        },
+        Err(e) => CommandResult::err(e.to_string()),
+    }
+}
+
+/// Push to remote
+#[tauri::command]
+pub fn git_push(path: String) -> CommandResult<()> {
+    let dir_path = Path::new(&path);
+
+    if !dir_path.exists() || !is_git_repo(dir_path) {
+        return CommandResult::err("Not a git repository".to_string());
+    }
+
+    let output = Command::new("git")
+        .args(["push"])
+        .current_dir(dir_path)
+        .output();
+
+    match output {
+        Ok(o) if o.status.success() => CommandResult::ok(()),
+        Ok(o) => CommandResult::err(String::from_utf8_lossy(&o.stderr).to_string()),
+        Err(e) => CommandResult::err(e.to_string()),
+    }
+}
+
+/// Pull from remote
+#[tauri::command]
+pub fn git_pull(path: String) -> CommandResult<()> {
+    let dir_path = Path::new(&path);
+
+    if !dir_path.exists() || !is_git_repo(dir_path) {
+        return CommandResult::err("Not a git repository".to_string());
+    }
+
+    let output = Command::new("git")
+        .args(["pull"])
+        .current_dir(dir_path)
+        .output();
+
+    match output {
+        Ok(o) if o.status.success() => CommandResult::ok(()),
+        Ok(o) => CommandResult::err(String::from_utf8_lossy(&o.stderr).to_string()),
+        Err(e) => CommandResult::err(e.to_string()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

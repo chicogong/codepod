@@ -1,10 +1,69 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Terminal } from '@xterm/xterm'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
+import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { isTauri, safeInvoke, safeListen } from '@/utils'
+import { useAppStore } from '@/stores'
 import '@xterm/xterm/css/xterm.css'
+
+const appStore = useAppStore()
+
+// Theme definitions
+const darkTheme: ITheme = {
+  background: '#1a1b26',
+  foreground: '#a9b1d6',
+  cursor: '#c0caf5',
+  cursorAccent: '#1a1b26',
+  selectionBackground: '#33467c',
+  selectionForeground: '#c0caf5',
+  black: '#15161e',
+  red: '#f7768e',
+  green: '#9ece6a',
+  yellow: '#e0af68',
+  blue: '#7aa2f7',
+  magenta: '#bb9af7',
+  cyan: '#7dcfff',
+  white: '#a9b1d6',
+  brightBlack: '#414868',
+  brightRed: '#f7768e',
+  brightGreen: '#9ece6a',
+  brightYellow: '#e0af68',
+  brightBlue: '#7aa2f7',
+  brightMagenta: '#bb9af7',
+  brightCyan: '#7dcfff',
+  brightWhite: '#c0caf5',
+}
+
+const lightTheme: ITheme = {
+  background: '#fafafa',
+  foreground: '#383a42',
+  cursor: '#526fff',
+  cursorAccent: '#fafafa',
+  selectionBackground: '#d7d7ff',
+  selectionForeground: '#383a42',
+  black: '#383a42',
+  red: '#e45649',
+  green: '#50a14f',
+  yellow: '#c18401',
+  blue: '#4078f2',
+  magenta: '#a626a4',
+  cyan: '#0184bc',
+  white: '#a0a1a7',
+  brightBlack: '#696c77',
+  brightRed: '#e45649',
+  brightGreen: '#50a14f',
+  brightYellow: '#c18401',
+  brightBlue: '#4078f2',
+  brightMagenta: '#a626a4',
+  brightCyan: '#0184bc',
+  brightWhite: '#fafafa',
+}
+
+// Current theme based on dark mode
+const currentTheme = computed(() =>
+  appStore.isDarkMode ? darkTheme : lightTheme
+)
 
 const props = defineProps<{
   sessionId?: string
@@ -44,30 +103,7 @@ async function initTerminal() {
     fontSize: 14,
     fontFamily:
       '"JetBrains Mono", "Fira Code", Menlo, Monaco, "Courier New", monospace',
-    theme: {
-      background: '#1a1b26',
-      foreground: '#a9b1d6',
-      cursor: '#c0caf5',
-      cursorAccent: '#1a1b26',
-      selectionBackground: '#33467c',
-      selectionForeground: '#c0caf5',
-      black: '#15161e',
-      red: '#f7768e',
-      green: '#9ece6a',
-      yellow: '#e0af68',
-      blue: '#7aa2f7',
-      magenta: '#bb9af7',
-      cyan: '#7dcfff',
-      white: '#a9b1d6',
-      brightBlack: '#414868',
-      brightRed: '#f7768e',
-      brightGreen: '#9ece6a',
-      brightYellow: '#e0af68',
-      brightBlue: '#7aa2f7',
-      brightMagenta: '#bb9af7',
-      brightCyan: '#7dcfff',
-      brightWhite: '#c0caf5',
-    },
+    theme: currentTheme.value,
     allowTransparency: true,
     scrollback: 10000,
     tabStopWidth: 4,
@@ -269,6 +305,16 @@ watch(
   }
 )
 
+// Watch for theme changes
+watch(
+  () => appStore.isDarkMode,
+  () => {
+    if (terminal) {
+      terminal.options.theme = currentTheme.value
+    }
+  }
+)
+
 // Lifecycle
 onMounted(() => {
   initTerminal()
@@ -313,9 +359,18 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 100%;
-  background: #1a1b26;
   border-radius: 8px;
   overflow: hidden;
+}
+
+/* Dark mode background */
+:global(.dark) .terminal-wrapper {
+  background: #1a1b26;
+}
+
+/* Light mode background */
+:global(:not(.dark)) .terminal-wrapper {
+  background: #fafafa;
 }
 
 .terminal-container {
@@ -342,25 +397,48 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(26, 27, 38, 0.9);
   backdrop-filter: blur(4px);
+}
+
+:global(.dark) .connection-overlay {
+  background: rgba(26, 27, 38, 0.9);
+}
+
+:global(:not(.dark)) .connection-overlay {
+  background: rgba(250, 250, 250, 0.9);
 }
 
 .connection-message {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #a9b1d6;
   font-size: 14px;
+}
+
+:global(.dark) .connection-message {
+  color: #a9b1d6;
+}
+
+:global(:not(.dark)) .connection-message {
+  color: #383a42;
 }
 
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid #414868;
-  border-top-color: #7aa2f7;
+  border: 2px solid;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+:global(.dark) .spinner {
+  border-color: #414868;
+  border-top-color: #7aa2f7;
+}
+
+:global(:not(.dark)) .spinner {
+  border-color: #d0d0d0;
+  border-top-color: #4078f2;
 }
 
 @keyframes spin {

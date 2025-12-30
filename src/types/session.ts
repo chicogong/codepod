@@ -1,4 +1,5 @@
 // 会话相关类型定义
+import type { Message } from './claude'
 
 export interface Session {
   id: string
@@ -21,4 +22,17 @@ export interface Project {
   path: string
   name: string
   lastOpened?: Date
+}
+
+/**
+ * Session checkpoint - a snapshot of conversation state
+ */
+export interface Checkpoint {
+  id: string
+  sessionId: string
+  name: string
+  description?: string
+  timestamp: Date
+  messages: Message[]
+  messageCount: number
 }
