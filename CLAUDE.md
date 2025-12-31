@@ -21,12 +21,18 @@ npm run tauri:build      # Build Tauri desktop app
 # Testing
 npm run test             # Run tests in watch mode
 npm run test:run         # Run tests once
+npm run test:ui          # Run tests with UI
 npm run test:coverage    # Generate coverage report
+npm run test:e2e         # Run E2E tests with Playwright
+npm run test:e2e:ui      # Run E2E tests with Playwright UI
+npm run test:e2e:headed  # Run E2E tests in headed mode
+npm run test:all         # Run all tests (unit + E2E)
 
 # Code Quality
 npm run lint             # ESLint with auto-fix
 npm run lint:check       # ESLint check only
 npm run format           # Prettier format
+npm run format:check     # Prettier check only
 npm run typecheck        # TypeScript type checking
 ```
 
@@ -166,15 +172,18 @@ clear()                  // Clear terminal buffer
 
 The app uses Pinia stores with localStorage persistence:
 
-- **appStore** (`stores/app.ts`) - Dark mode, sidebar, project path, global settings
-- **chatStore** (`stores/chat.ts`) - Messages, streaming state, token statistics
-- **sessionStore** (`stores/session.ts`) - Session list, history, persistence
+- **appStore** (`stores/app.ts`) - Dark mode, sidebar, project path, auto-checkpoint settings, global settings
+- **chatStore** (`stores/chat.ts`) - Messages, streaming state, token statistics, auto-checkpoint logic
+- **sessionStore** (`stores/session.ts`) - Session list, history, checkpoints, persistence
 - **configStore** (`stores/config.ts`) - MCP servers, commands, agents, skills
 - **tabsStore** (`stores/tabs.ts`) - Multi-tab dialog management
+- **usageStore** (`stores/usage.ts`) - API usage tracking, token statistics, cost analytics
 
 **Persistence**: All stores auto-save to localStorage. Session messages are serialized with full message history per session ID.
 
-**Token Tracking**: `chatStore` tracks input/output tokens and calculates estimated costs based on model pricing.
+**Token Tracking**: `chatStore` tracks input/output tokens per message. `usageStore` maintains historical records with daily aggregations and per-model breakdowns.
+
+**Checkpoints**: `sessionStore` manages conversation checkpoints, allowing restoration to previous states. Supports both manual and automatic checkpoint creation.
 
 ### Message Flow
 
@@ -222,6 +231,59 @@ Supports toggling between `claude` and `codebuddy` CLI executables:
 - Stored in `appStore.cliCommand`
 - Persisted to localStorage
 - Used when spawning PTY sessions or invoking commands
+
+### Checkpoint System
+
+The app provides conversation state management through checkpoints:
+
+**Manual Checkpoints**:
+- User creates checkpoints via CheckpointPanel (⇧⌘P/Ctrl+Shift+P)
+- Each checkpoint stores complete message history at that point
+- Supports rename, delete, and restore operations
+- Checkpoints persisted per session in localStorage
+
+**Auto-Checkpoint System**:
+- Configurable automatic checkpoint creation
+- Settings: `appStore.autoCheckpointConfig` (enabled/disabled, messageInterval, namePrefix)
+- Triggers after assistant messages when interval reached
+- Default: every 10 messages with prefix "自动检查点" (Auto Checkpoint)
+- Auto-checkpoints can be distinguished from manual ones by prefix
+
+**Checkpoint Storage**:
+- Structure: `{ id, name, timestamp, messages[], sessionId }`
+- Stored in `sessionStore.checkpoints` array
+- Restoration creates new messages from checkpoint state
+- UI shows checkpoint count and last checkpoint time
+
+**Key Components**:
+- `src/components/session/CheckpointPanel.vue` - Checkpoint UI
+- `src/stores/session.ts` - Checkpoint CRUD operations
+- `src/stores/chat.ts` - Auto-checkpoint triggering logic
+
+### Git Integration
+
+Built-in Git status viewer and operations:
+- **GitStatus Component** (`src/components/explorer/GitStatus.vue`) - Visual git status display
+- **Backend Commands** (`src-tauri/src/commands/git.rs`):
+  - `get_git_status` - Get repository status with staged/unstaged/untracked files
+  - `get_git_log` - Get commit history
+  - `get_git_branch` / `list_git_branches` - Branch information
+  - `git_stage_all` / `git_unstage_all` - Stage operations
+  - `git_commit` / `git_push` / `git_pull` - Repository operations
+- **Integration Tests** (`tests/integration/git-status.test.ts`) - Git functionality coverage
+
+### Usage Analytics
+
+Comprehensive token usage and cost tracking:
+- **UsagePanel Component** - Display statistics and trends
+- **UsageStore** - Maintains usage records with:
+  - Per-request tracking (model, tokens, cost, timestamp)
+  - Daily aggregations with model breakdowns
+  - Last 7 days statistics
+  - Total lifetime statistics
+  - Export functionality for analysis
+- **Model Pricing** - Predefined pricing for Claude 4.5, 4 Opus, 3.5 variants
+- **Storage** - Last 1000 records persisted to localStorage
 
 ## Important Patterns
 
@@ -274,16 +336,41 @@ Each tab has its own isolated chat context:
 
 ## Testing
 
-### Frontend Tests
+### Frontend Unit Tests
 - Framework: Vitest + Vue Test Utils
 - Environment: happy-dom
 - Setup: `tests/setup.ts`
 - Location: `src/**/*.{test,spec}.ts` and `tests/**/*.{test,spec}.ts`
+- Run: `npm run test` (watch) or `npm run test:run` (once)
+
+### Integration Tests
+- Location: `tests/integration/`
+- Tests for git integration, sidebar, and component interactions
+- Run: `npm run test:run` (included with unit tests)
+
+### E2E Tests
+- Framework: Playwright
+- Config: `playwright.config.ts`
+- Location: `tests/e2e/`
+- Browser: Chromium (Firefox/WebKit available)
+- Features:
+  - Auto-starts dev server on `localhost:5173`
+  - Screenshots on failure
+  - Trace recording on retry
+  - HTML report generated in `playwright-report/`
+- Run: `npm run test:e2e` (headless) or `npm run test:e2e:ui` (interactive)
+- Run single test file: `npx playwright test tests/e2e/app.spec.ts`
 
 ### Rust Tests
 - Standard Rust test framework
 - Run with `cargo test` in `src-tauri/`
 - PTY tests should handle session cleanup
+- Show output: `cargo test -- --nocapture`
+
+### Git Hooks
+- Pre-commit: Husky + lint-staged
+- Automatically runs ESLint and Prettier on staged files
+- Configured in `package.json` `lint-staged` section
 
 ## Known Patterns to Follow
 
@@ -304,7 +391,28 @@ Each tab has its own isolated chat context:
 
 1. Update `ModelId` type in `src/types/chat.ts`
 2. Add pricing info to `MODEL_PRICING` in `stores/chat.ts`
-3. Update model selector options in UI components
+3. Add pricing to `MODEL_PRICING` in `stores/usage.ts` for cost tracking
+4. Update model selector options in UI components
+
+### Working with Checkpoints
+
+**Creating Auto-Checkpoint Logic**:
+1. Check `appStore.autoCheckpointConfig.enabled` before triggering
+2. Track message count via `chatStore.lastAutoCheckpointMessageCount`
+3. Trigger after assistant messages when interval reached
+4. Use `sessionStore.createCheckpoint()` with auto-generated name from config prefix
+
+**Manual Checkpoint Creation**:
+1. User opens CheckpointPanel with keyboard shortcut
+2. Enters checkpoint name
+3. `sessionStore.createCheckpoint()` saves current `chatStore.messages`
+4. Checkpoint stored with session association
+
+**Restoring Checkpoints**:
+1. User selects checkpoint from CheckpointPanel
+2. `sessionStore.restoreCheckpoint()` replaces `chatStore.messages`
+3. New messages continue from restored state
+4. Original checkpoint remains unchanged
 
 ### Working with the Terminal System
 
@@ -364,4 +472,20 @@ Build artifacts generated by `npm run tauri:build` appear in `src-tauri/target/r
 - **FitAddon Timing**: Call `fitAddon.fit()` after `nextTick()` to ensure container has rendered.
 - **Unlisten Functions**: Store unlisten functions from Tauri `listen()` and call them on cleanup to prevent event listener leaks.
 - **Session Resume**: `create_claude_pty` with `resume_session` adds `--resume` flag. Ensure session ID is valid Claude session.
-- **Terminal Theme in Light Mode**: Current theme is hardcoded to dark (Tokyo Night). Need separate theme for light mode.
+- **Terminal Theme Switching**: Now supports both light and dark themes via `appStore.isDarkMode`. Themes are applied dynamically.
+
+### Checkpoint-Specific Gotchas
+
+- **Auto-Checkpoint Timing**: Only triggers after assistant messages via `checkAndCreateAutoCheckpoint()`. Track via `chatStore.lastAutoCheckpointMessageCount`.
+- **Checkpoint Message Cloning**: Checkpoints deep-clone messages. Modifications to restored messages don't affect original checkpoint.
+- **localStorage Size Limits**: With many checkpoints and long conversations, localStorage can hit browser limits (~5-10MB). Implement cleanup if needed.
+- **Checkpoint Panel State**: Panel visibility state is not persisted. Always opens closed on app restart.
+- **Keyboard Shortcut Conflicts**: ⇧⌘P (Shift+Cmd+P) may conflict with browser/system shortcuts on some platforms.
+- **Chinese Locale**: Default auto-checkpoint prefix is in Chinese ('自动检查点'). Consider making it configurable for i18n.
+
+### Usage Analytics Gotchas
+
+- **Record Limits**: Only last 1000 records are kept. Older records are automatically pruned on save.
+- **Cost Calculations**: Based on hardcoded `MODEL_PRICING`. Update when Claude releases new models or pricing changes.
+- **Token Accuracy**: Token counts are estimates from API responses. May not exactly match billing.
+- **Export Format**: `exportRecords()` returns raw JSON. Consider CSV export for spreadsheet analysis.
