@@ -6,10 +6,11 @@ import CommandList from './CommandList.vue'
 import AgentList from './AgentList.vue'
 import SkillList from './SkillList.vue'
 import CliSettings from './CliSettings.vue'
+import UsagePanel from './UsagePanel.vue'
 
 const configStore = useConfigStore()
 
-type TabType = 'cli' | 'mcp' | 'commands' | 'agents' | 'skills'
+type TabType = 'cli' | 'mcp' | 'commands' | 'agents' | 'skills' | 'usage'
 const activeTab = ref<TabType>('cli')
 
 const tabs: { id: TabType; label: string; icon: string }[] = [
@@ -18,6 +19,7 @@ const tabs: { id: TabType; label: string; icon: string }[] = [
   { id: 'commands', label: 'Cmds', icon: '⚡' },
   { id: 'agents', label: 'Agents', icon: '🤖' },
   { id: 'skills', label: 'Skills', icon: '🎯' },
+  { id: 'usage', label: 'Usage', icon: '📊' },
 ]
 
 onMounted(() => {
@@ -78,6 +80,7 @@ onMounted(() => {
       <CommandList v-else-if="activeTab === 'commands'" />
       <AgentList v-else-if="activeTab === 'agents'" />
       <SkillList v-else-if="activeTab === 'skills'" />
+      <UsagePanel v-else-if="activeTab === 'usage'" />
     </div>
   </div>
 </template>

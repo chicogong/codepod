@@ -1,13 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import type { Session, Message } from '@/types'
+import type { Session, Message, Checkpoint } from '@/types'
 
 const SESSIONS_STORAGE_KEY = 'codepod_sessions'
 const MESSAGES_STORAGE_KEY = 'codepod_messages'
+const CHECKPOINTS_STORAGE_KEY = 'codepod_checkpoints'
 
 export const useSessionStore = defineStore('session', () => {
   // State
   const sessions = ref<Session[]>([])
+  const checkpoints = ref<Map<string, Checkpoint[]>>(new Map())
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
@@ -108,6 +110,108 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
+  // Checkpoint persistence
+  function saveCheckpoints() {
+    try {
+      const checkpointsArray = Array.from(checkpoints.value.entries())
+      localStorage.setItem(
+        CHECKPOINTS_STORAGE_KEY,
+        JSON.stringify(checkpointsArray)
+      )
+    } catch (e) {
+      console.error('[Session] Failed to save checkpoints:', e)
+    }
+  }
+
+  function loadCheckpoints() {
+    try {
+      const stored = localStorage.getItem(CHECKPOINTS_STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored) as [string, Checkpoint[]][]
+        checkpoints.value = new Map(
+          parsed.map(([sessionId, cps]) => [
+            sessionId,
+            cps.map(cp => ({
+              ...cp,
+              timestamp: new Date(cp.timestamp),
+              messages: cp.messages.map(m => ({
+                ...m,
+                timestamp: new Date(m.timestamp),
+              })),
+            })),
+          ])
+        )
+      }
+    } catch (e) {
+      console.error('[Session] Failed to load checkpoints:', e)
+    }
+  }
+
+  function getSessionCheckpoints(sessionId: string): Checkpoint[] {
+    return checkpoints.value.get(sessionId) || []
+  }
+
+  function createCheckpoint(
+    sessionId: string,
+    name: string,
+    messages: Message[],
+    description?: string
+  ): Checkpoint {
+    const checkpoint: Checkpoint = {
+      id: crypto.randomUUID(),
+      sessionId,
+      name,
+      description,
+      timestamp: new Date(),
+      messages: JSON.parse(JSON.stringify(messages)), // Deep clone
+      messageCount: messages.length,
+    }
+
+    const sessionCheckpoints = checkpoints.value.get(sessionId) || []
+    sessionCheckpoints.push(checkpoint)
+    checkpoints.value.set(sessionId, sessionCheckpoints)
+    saveCheckpoints()
+
+    return checkpoint
+  }
+
+  function deleteCheckpoint(sessionId: string, checkpointId: string) {
+    const sessionCheckpoints = checkpoints.value.get(sessionId)
+    if (sessionCheckpoints) {
+      const index = sessionCheckpoints.findIndex(cp => cp.id === checkpointId)
+      if (index > -1) {
+        sessionCheckpoints.splice(index, 1)
+        if (sessionCheckpoints.length === 0) {
+          checkpoints.value.delete(sessionId)
+        } else {
+          checkpoints.value.set(sessionId, sessionCheckpoints)
+        }
+        saveCheckpoints()
+      }
+    }
+  }
+
+  function updateCheckpoint(
+    sessionId: string,
+    checkpointId: string,
+    updates: Partial<Pick<Checkpoint, 'name' | 'description'>>
+  ) {
+    const sessionCheckpoints = checkpoints.value.get(sessionId)
+    if (sessionCheckpoints) {
+      const checkpoint = sessionCheckpoints.find(cp => cp.id === checkpointId)
+      if (checkpoint) {
+        Object.assign(checkpoint, updates)
+        checkpoints.value.set(sessionId, sessionCheckpoints)
+        saveCheckpoints()
+      }
+    }
+  }
+
+  function deleteSessionCheckpoints(sessionId: string) {
+    checkpoints.value.delete(sessionId)
+    saveCheckpoints()
+  }
+
   // Actions
   function setSessions(newSessions: Session[]) {
     sessions.value = newSessions
@@ -137,6 +241,7 @@ export const useSessionStore = defineStore('session', () => {
     if (index > -1) {
       sessions.value.splice(index, 1)
       deleteMessages(sessionId)
+      deleteSessionCheckpoints(sessionId)
       saveSessions()
     }
   }
@@ -164,6 +269,7 @@ export const useSessionStore = defineStore('session', () => {
   // Initialize - load sessions from storage
   function init() {
     loadSessions()
+    loadCheckpoints()
   }
 
   // Watch for changes and auto-save
@@ -178,6 +284,7 @@ export const useSessionStore = defineStore('session', () => {
   return {
     // State
     sessions,
+    checkpoints,
     isLoading,
     error,
 
@@ -200,5 +307,12 @@ export const useSessionStore = defineStore('session', () => {
     saveMessages,
     loadMessages,
     deleteMessages,
+
+    // Checkpoint management
+    getSessionCheckpoints,
+    createCheckpoint,
+    deleteCheckpoint,
+    updateCheckpoint,
+    deleteSessionCheckpoints,
   }
 })

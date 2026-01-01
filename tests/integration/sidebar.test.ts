@@ -16,6 +16,12 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 // Mock naive-ui components
 vi.mock('naive-ui', () => ({
+  useMessage: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+  }),
   NTabs: {
     name: 'NTabs',
     props: ['value'],
@@ -240,6 +246,32 @@ vi.mock('naive-ui', () => ({
       { slots }: { slots: Record<string, () => unknown> }
     ) {
       return () => h('span', { class: 'n-text' }, slots.default?.())
+    },
+  },
+  NInput: {
+    name: 'NInput',
+    props: ['value', 'type', 'placeholder', 'rows', 'disabled'],
+    setup(
+      _props: Record<string, unknown>,
+      { attrs }: { attrs: Record<string, unknown> }
+    ) {
+      return () => h('textarea', { class: 'n-input', ...attrs })
+    },
+  },
+  NModal: {
+    name: 'NModal',
+    props: ['show', 'preset', 'title', 'style', 'bordered'],
+    setup(
+      props: Record<string, unknown>,
+      { slots }: { slots: Record<string, () => unknown> }
+    ) {
+      return () =>
+        props.show
+          ? h('div', { class: 'n-modal' }, [
+              slots.default?.(),
+              slots.footer?.(),
+            ])
+          : null
     },
   },
 }))

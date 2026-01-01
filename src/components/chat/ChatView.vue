@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
-import { useChatStore } from '@/stores'
+import { NDrawer, useMessage } from 'naive-ui'
+import { useChatStore, useSessionStore } from '@/stores'
 import { useClaude, useSearch, useKeyboard } from '@/composables'
+import { CheckpointPanel } from '@/components/session'
 import MessageList from './MessageList.vue'
 import ChatInput from './ChatInput.vue'
 import SearchBar from './SearchBar.vue'
 import ExportDialog from './ExportDialog.vue'
+import type { Checkpoint } from '@/types'
 
 const chatStore = useChatStore()
+const sessionStore = useSessionStore()
+const message = useMessage()
 const {
   sendMessage,
   checkClaude,
@@ -22,6 +27,7 @@ const initError = ref<string | null>(null)
 const isConnecting = ref(false)
 const customApiUrl = ref('http://127.0.0.1:3002')
 const showExportDialog = ref(false)
+const showCheckpointPanel = ref(false)
 
 // 连接状态文本
 const connectionStatusText = computed(() => {
@@ -73,6 +79,20 @@ useKeyboard([
     action: () => (showExportDialog.value = true),
     description: 'Export conversation',
   },
+  {
+    key: 'p',
+    meta: true,
+    shift: true,
+    action: () => (showCheckpointPanel.value = !showCheckpointPanel.value),
+    description: 'Toggle checkpoints panel',
+  },
+  {
+    key: 'p',
+    ctrl: true,
+    shift: true,
+    action: () => (showCheckpointPanel.value = !showCheckpointPanel.value),
+    description: 'Toggle checkpoints panel',
+  },
 ])
 
 onMounted(async () => {
@@ -101,6 +121,28 @@ async function handleReconnect() {
 
 async function handleSend(content: string) {
   await sendMessage(content)
+}
+
+function handleRestoreCheckpoint(checkpoint: Checkpoint) {
+  try {
+    // Restore messages from checkpoint
+    chatStore.setMessages(checkpoint.messages)
+
+    // Save to session
+    if (chatStore.currentSessionId) {
+      sessionStore.saveMessages(chatStore.currentSessionId, checkpoint.messages)
+      sessionStore.updateSession(chatStore.currentSessionId, {
+        messageCount: checkpoint.messageCount,
+        updatedAt: new Date(),
+      })
+    }
+
+    message.success(`已恢复到检查点: ${checkpoint.name}`)
+    showCheckpointPanel.value = false
+  } catch (error) {
+    message.error('恢复检查点失败')
+    console.error('Failed to restore checkpoint:', error)
+  }
 }
 </script>
 
@@ -160,6 +202,14 @@ async function handleSend(content: string) {
       </span>
       <div class="flex items-center gap-3">
         <button
+          v-if="chatStore.messages.length > 0 && chatStore.currentSessionId"
+          class="text-green-600 dark:text-green-400 hover:underline"
+          title="Checkpoints (⇧⌘P)"
+          @click="showCheckpointPanel = true"
+        >
+          Checkpoints
+        </button>
+        <button
           v-if="chatStore.messages.length > 0"
           class="text-green-600 dark:text-green-400 hover:underline"
           title="Export (⇧⌘E)"
@@ -195,5 +245,14 @@ async function handleSend(content: string) {
       :visible="showExportDialog"
       @close="showExportDialog = false"
     />
+
+    <!-- Checkpoint Panel Drawer -->
+    <NDrawer v-model:show="showCheckpointPanel" :width="400" placement="right">
+      <CheckpointPanel
+        v-if="chatStore.currentSessionId"
+        :session-id="chatStore.currentSessionId"
+        @restore="handleRestoreCheckpoint"
+      />
+    </NDrawer>
   </div>
 </template>

@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { useChatStore, useAppStore } from '@/stores'
+import { useChatStore, useAppStore, useUsageStore } from '@/stores'
 import type { ClaudeOptions, ContentBlock } from '@/types'
 import { claudeHttpService, type StreamMessage } from '@/services/claudeHttp'
 
@@ -31,6 +31,7 @@ const httpApiUrl = ref('http://127.0.0.1:3002')
 export function useClaude() {
   const chatStore = useChatStore()
   const appStore = useAppStore()
+  const usageStore = useUsageStore()
 
   // 计算属性：是否可用
   const isAvailable = computed(() => connectionMode.value !== 'none')
@@ -326,6 +327,16 @@ export function useClaude() {
         const outputTokens = message.usage.output_tokens || 0
         chatStore.addTokens(inputTokens, outputTokens)
         console.log('[Claude] Token usage:', { inputTokens, outputTokens })
+
+        // 记录到 usage store 进行持久化
+        usageStore.loadRecords() // 确保已加载
+        usageStore.addRecord(
+          chatStore.currentModel,
+          inputTokens,
+          outputTokens,
+          chatStore.currentSessionId || undefined,
+          appStore.projectPath || undefined
+        )
       }
     }
   }

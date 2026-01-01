@@ -12,12 +12,20 @@ import {
   NBadge,
   NCollapse,
   NCollapseItem,
+  NInput,
+  NModal,
+  useMessage,
 } from 'naive-ui'
 import {
   GitBranchOutline,
   RefreshOutline,
   ArrowUpOutline,
   ArrowDownOutline,
+  AddOutline,
+  RemoveOutline,
+  CloudUploadOutline,
+  CloudDownloadOutline,
+  CheckmarkOutline,
 } from '@vicons/ionicons5'
 import { invoke } from '@tauri-apps/api/core'
 import type { GitStatus, GitFileStatus } from '@/types'
@@ -28,13 +36,20 @@ interface CommandResult<T> {
   error?: string
 }
 
+const message = useMessage()
+
 const props = defineProps<{
   path?: string
 }>()
 
 const isLoading = ref(false)
+const isExecuting = ref(false)
 const error = ref<string | null>(null)
 const gitStatus = ref<GitStatus | null>(null)
+
+// Commit modal state
+const showCommitModal = ref(false)
+const commitMessage = ref('')
 
 // Status color mapping
 const statusColors: Record<string, 'warning' | 'success' | 'error' | 'info'> = {
@@ -101,6 +116,125 @@ async function loadStatus() {
   }
 }
 
+// Git operations
+async function stageAll() {
+  if (!props.path) return
+
+  isExecuting.value = true
+  try {
+    const result = await invoke<CommandResult<void>>('git_stage_all', {
+      path: props.path,
+    })
+
+    if (result.success) {
+      message.success('All files staged')
+      await loadStatus()
+    } else {
+      message.error(result.error || 'Failed to stage files')
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to stage files')
+  } finally {
+    isExecuting.value = false
+  }
+}
+
+async function unstageAll() {
+  if (!props.path) return
+
+  isExecuting.value = true
+  try {
+    const result = await invoke<CommandResult<void>>('git_unstage_all', {
+      path: props.path,
+    })
+
+    if (result.success) {
+      message.success('All files unstaged')
+      await loadStatus()
+    } else {
+      message.error(result.error || 'Failed to unstage files')
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to unstage files')
+  } finally {
+    isExecuting.value = false
+  }
+}
+
+function openCommitModal() {
+  commitMessage.value = ''
+  showCommitModal.value = true
+}
+
+async function doCommit() {
+  if (!props.path || !commitMessage.value.trim()) return
+
+  isExecuting.value = true
+  try {
+    const result = await invoke<CommandResult<void>>('git_commit', {
+      path: props.path,
+      message: commitMessage.value.trim(),
+    })
+
+    if (result.success) {
+      message.success('Committed successfully')
+      showCommitModal.value = false
+      commitMessage.value = ''
+      await loadStatus()
+    } else {
+      message.error(result.error || 'Failed to commit')
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to commit')
+  } finally {
+    isExecuting.value = false
+  }
+}
+
+async function gitPush() {
+  if (!props.path) return
+
+  isExecuting.value = true
+  try {
+    const result = await invoke<CommandResult<void>>('git_push', {
+      path: props.path,
+    })
+
+    if (result.success) {
+      message.success('Pushed successfully')
+      await loadStatus()
+    } else {
+      message.error(result.error || 'Failed to push')
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to push')
+  } finally {
+    isExecuting.value = false
+  }
+}
+
+async function gitPull() {
+  if (!props.path) return
+
+  isExecuting.value = true
+  try {
+    const result = await invoke<CommandResult<void>>('git_pull', {
+      path: props.path,
+    })
+
+    if (result.success) {
+      message.success('Pulled successfully')
+      await loadStatus()
+    } else {
+      message.error(result.error || 'Failed to pull')
+    }
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'Failed to pull')
+  } finally {
+    isExecuting.value = false
+  }
+}
+
 // Watch for path changes
 watch(
   () => props.path,
@@ -164,6 +298,83 @@ defineExpose({
               <NIcon :component="RefreshOutline" />
             </template>
           </NButton>
+        </div>
+
+        <!-- Git actions -->
+        <div class="git-actions">
+          <NTooltip trigger="hover">
+            <template #trigger>
+              <NButton
+                size="tiny"
+                :disabled="isExecuting || !hasChanges"
+                @click="stageAll"
+              >
+                <template #icon>
+                  <NIcon :component="AddOutline" />
+                </template>
+                Stage
+              </NButton>
+            </template>
+            Stage all changes
+          </NTooltip>
+
+          <NTooltip trigger="hover">
+            <template #trigger>
+              <NButton
+                size="tiny"
+                :disabled="isExecuting || !gitStatus.staged_count"
+                @click="unstageAll"
+              >
+                <template #icon>
+                  <NIcon :component="RemoveOutline" />
+                </template>
+                Unstage
+              </NButton>
+            </template>
+            Unstage all changes
+          </NTooltip>
+
+          <NTooltip trigger="hover">
+            <template #trigger>
+              <NButton
+                size="tiny"
+                :disabled="isExecuting || !gitStatus.staged_count"
+                @click="openCommitModal"
+              >
+                <template #icon>
+                  <NIcon :component="CheckmarkOutline" />
+                </template>
+                Commit
+              </NButton>
+            </template>
+            Commit staged changes
+          </NTooltip>
+
+          <NTooltip trigger="hover">
+            <template #trigger>
+              <NButton size="tiny" :disabled="isExecuting" @click="gitPull">
+                <template #icon>
+                  <NIcon :component="CloudDownloadOutline" />
+                </template>
+              </NButton>
+            </template>
+            Pull from remote
+          </NTooltip>
+
+          <NTooltip trigger="hover">
+            <template #trigger>
+              <NButton
+                size="tiny"
+                :disabled="isExecuting || gitStatus.ahead === 0"
+                @click="gitPush"
+              >
+                <template #icon>
+                  <NIcon :component="CloudUploadOutline" />
+                </template>
+              </NButton>
+            </template>
+            Push to remote
+          </NTooltip>
         </div>
 
         <!-- Conflict warning -->
@@ -254,6 +465,38 @@ defineExpose({
         </NCollapse>
       </div>
     </NSpin>
+
+    <!-- Commit Modal -->
+    <NModal
+      v-model:show="showCommitModal"
+      preset="card"
+      title="Commit Changes"
+      :style="{ width: '400px' }"
+      :bordered="false"
+    >
+      <NInput
+        v-model:value="commitMessage"
+        type="textarea"
+        placeholder="Enter commit message..."
+        :rows="4"
+        :disabled="isExecuting"
+        @keydown.ctrl.enter="doCommit"
+        @keydown.meta.enter="doCommit"
+      />
+      <template #footer>
+        <div class="modal-footer">
+          <NButton @click="showCommitModal = false">Cancel</NButton>
+          <NButton
+            type="primary"
+            :loading="isExecuting"
+            :disabled="!commitMessage.trim()"
+            @click="doCommit"
+          >
+            Commit
+          </NButton>
+        </div>
+      </template>
+    </NModal>
   </div>
 </template>
 
@@ -279,6 +522,18 @@ defineExpose({
   font-weight: 500;
   font-size: 13px;
   flex: 1;
+}
+
+.git-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .sync-status {

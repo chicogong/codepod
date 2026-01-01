@@ -37,6 +37,11 @@ pub fn run() {
             git::get_git_branch,
             git::list_git_branches,
             git::get_git_log,
+            git::git_stage_all,
+            git::git_unstage_all,
+            git::git_commit,
+            git::git_push,
+            git::git_pull,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
