@@ -84,8 +84,8 @@ export const useUsageStore = defineStore('usage', () => {
   ) {
     const pricing = MODEL_PRICING[model] || MODEL_PRICING['claude-4.5']
     const cost =
-      (inputTokens / 1_000_000) * pricing.input +
-      (outputTokens / 1_000_000) * pricing.output
+      (inputTokens / 1_000_000) * (pricing?.input ?? 3.0) +
+      (outputTokens / 1_000_000) * (pricing?.output ?? 15.0)
 
     const record: UsageRecord = {
       id: crypto.randomUUID(),
@@ -107,7 +107,7 @@ export const useUsageStore = defineStore('usage', () => {
     const statsMap = new Map<string, DailyStats>()
 
     records.value.forEach(record => {
-      const date = record.timestamp.toISOString().split('T')[0]
+      const date = record.timestamp.toISOString().split('T')[0] ?? ''
 
       if (!statsMap.has(date)) {
         statsMap.set(date, {
@@ -132,10 +132,12 @@ export const useUsageStore = defineStore('usage', () => {
       if (!stats.byModel[record.model]) {
         stats.byModel[record.model] = { tokens: 0, cost: 0, count: 0 }
       }
-      stats.byModel[record.model].tokens +=
-        record.inputTokens + record.outputTokens
-      stats.byModel[record.model].cost += record.cost
-      stats.byModel[record.model].count += 1
+      const modelStats = stats.byModel[record.model]
+      if (modelStats) {
+        modelStats.tokens += record.inputTokens + record.outputTokens
+        modelStats.cost += record.cost
+        modelStats.count += 1
+      }
     })
 
     // Sort by date descending
