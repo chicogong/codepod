@@ -15,6 +15,8 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 // Mock naive-ui components
 vi.mock('naive-ui', () => ({
+  NDropdown: { template: '<div><slot/></div>' },
+
   useMessage: () => ({
     success: vi.fn(),
     error: vi.fn(),
