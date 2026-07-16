@@ -29,6 +29,7 @@ import {
 } from '@vicons/ionicons5'
 import { invoke } from '@tauri-apps/api/core'
 import type { GitStatus, GitFileStatus } from '@/types'
+import GitDiffViewer from './GitDiffViewer.vue'
 
 interface CommandResult<T> {
   success: boolean
@@ -50,6 +51,15 @@ const gitStatus = ref<GitStatus | null>(null)
 // Commit modal state
 const showCommitModal = ref(false)
 const commitMessage = ref('')
+
+// Diff viewer state
+const showDiffViewer = ref(false)
+const activeDiffFile = ref<GitFileStatus | null>(null)
+
+function viewDiff(file: GitFileStatus) {
+  activeDiffFile.value = file
+  showDiffViewer.value = true
+}
 
 // Status color mapping
 const statusColors: Record<string, 'warning' | 'success' | 'error' | 'info'> = {
@@ -404,7 +414,10 @@ defineExpose({
           >
             <NList :show-divider="false" size="small">
               <NListItem v-for="file in groupedFiles.staged" :key="file.path">
-                <div class="file-item">
+                <div
+                  class="file-item cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded transition-colors"
+                  @click="viewDiff(file)"
+                >
                   <NTag
                     :type="statusColors[file.status] || 'default'"
                     size="tiny"
@@ -427,7 +440,10 @@ defineExpose({
           >
             <NList :show-divider="false" size="small">
               <NListItem v-for="file in groupedFiles.unstaged" :key="file.path">
-                <div class="file-item">
+                <div
+                  class="file-item cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded transition-colors"
+                  @click="viewDiff(file)"
+                >
                   <NTag
                     :type="statusColors[file.status] || 'default'"
                     size="tiny"
@@ -453,7 +469,10 @@ defineExpose({
                 v-for="file in groupedFiles.untracked"
                 :key="file.path"
               >
-                <div class="file-item">
+                <div
+                  class="file-item cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded transition-colors"
+                  @click="viewDiff(file)"
+                >
                   <NTag type="info" size="tiny">?</NTag>
                   <span class="file-path" :title="file.path">
                     {{ file.path }}
@@ -497,6 +516,13 @@ defineExpose({
         </div>
       </template>
     </NModal>
+
+    <!-- Diff Viewer Modal -->
+    <GitDiffViewer
+      v-model:show="showDiffViewer"
+      :file="activeDiffFile"
+      :path="props.path || ''"
+    />
   </div>
 </template>
 

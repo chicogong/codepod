@@ -18,7 +18,7 @@ fn expand_path(path: &str) -> PathBuf {
 #[command]
 pub async fn read_config_file(path: String) -> CommandResult<String> {
     let expanded = expand_path(&path);
-    
+
     match fs::read_to_string(&expanded).await {
         Ok(content) => CommandResult::ok(content),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -33,14 +33,14 @@ pub async fn read_config_file(path: String) -> CommandResult<String> {
 #[command]
 pub async fn write_config_file(path: String, content: String) -> CommandResult<()> {
     let expanded = expand_path(&path);
-    
+
     // Ensure parent directory exists
     if let Some(parent) = expanded.parent() {
         if let Err(e) = fs::create_dir_all(parent).await {
             return CommandResult::err(format!("Failed to create directory: {}", e));
         }
     }
-    
+
     match fs::write(&expanded, content).await {
         Ok(()) => CommandResult::ok(()),
         Err(e) => CommandResult::err(format!("Failed to write {}: {}", path, e)),
@@ -76,27 +76,28 @@ pub struct SkillInfo {
 #[command]
 pub async fn list_commands() -> CommandResult<Vec<CommandInfo>> {
     let commands_dir = expand_path("~/.claude/commands");
-    
+
     if !commands_dir.exists() {
         return CommandResult::ok(vec![]);
     }
-    
+
     let mut commands = Vec::new();
-    
+
     match fs::read_dir(&commands_dir).await {
         Ok(mut entries) => {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 let path = entry.path();
                 if path.extension().is_some_and(|e| e == "md") {
                     if let Ok(content) = fs::read_to_string(&path).await {
-                        let name = path.file_stem()
+                        let name = path
+                            .file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or("unknown")
                             .to_string();
-                        
+
                         // Parse frontmatter for description
                         let (description, body) = parse_frontmatter(&content);
-                        
+
                         commands.push(CommandInfo {
                             name,
                             description,
@@ -116,27 +117,28 @@ pub async fn list_commands() -> CommandResult<Vec<CommandInfo>> {
 #[command]
 pub async fn list_agents() -> CommandResult<Vec<AgentInfo>> {
     let agents_dir = expand_path("~/.claude/agents");
-    
+
     if !agents_dir.exists() {
         return CommandResult::ok(vec![]);
     }
-    
+
     let mut agents = Vec::new();
-    
+
     match fs::read_dir(&agents_dir).await {
         Ok(mut entries) => {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 let path = entry.path();
                 if path.extension().is_some_and(|e| e == "md") {
                     if let Ok(content) = fs::read_to_string(&path).await {
-                        let name = path.file_stem()
+                        let name = path
+                            .file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or("unknown")
                             .to_string();
-                        
+
                         // Parse frontmatter for description
                         let (description, body) = parse_frontmatter(&content);
-                        
+
                         agents.push(AgentInfo {
                             name,
                             description,
@@ -157,27 +159,28 @@ pub async fn list_agents() -> CommandResult<Vec<AgentInfo>> {
 #[command]
 pub async fn list_skills() -> CommandResult<Vec<SkillInfo>> {
     let skills_dir = expand_path("~/.claude/skills");
-    
+
     if !skills_dir.exists() {
         return CommandResult::ok(vec![]);
     }
-    
+
     let mut skills = Vec::new();
-    
+
     match fs::read_dir(&skills_dir).await {
         Ok(mut entries) => {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 let path = entry.path();
                 if path.extension().is_some_and(|e| e == "md") {
                     if let Ok(content) = fs::read_to_string(&path).await {
-                        let name = path.file_stem()
+                        let name = path
+                            .file_stem()
                             .and_then(|s| s.to_str())
                             .unwrap_or("unknown")
                             .to_string();
-                        
+
                         // Parse frontmatter for description
                         let (description, body) = parse_frontmatter(&content);
-                        
+
                         skills.push(SkillInfo {
                             name,
                             description,
@@ -199,7 +202,7 @@ fn parse_frontmatter(content: &str) -> (Option<String>, String) {
         if let Some(end) = stripped.find("---") {
             let frontmatter = &stripped[..end];
             let body = stripped[end + 3..].trim().to_string();
-            
+
             // Simple extraction of description field
             for line in frontmatter.lines() {
                 if let Some(desc_value) = line.strip_prefix("description:") {
@@ -207,7 +210,7 @@ fn parse_frontmatter(content: &str) -> (Option<String>, String) {
                     return (Some(desc.trim_matches('"').to_string()), body);
                 }
             }
-            
+
             return (None, body);
         }
     }
@@ -237,7 +240,7 @@ description: "Test command"
 ---
 
 Command content here"#;
-        
+
         let (desc, body) = parse_frontmatter(content);
         assert_eq!(desc, Some("Test command".to_string()));
         assert_eq!(body, "Command content here");

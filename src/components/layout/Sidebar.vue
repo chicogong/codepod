@@ -69,6 +69,19 @@ function handleFileSelect(file: FileEntry) {
 function handleFileOpen(file: FileEntry) {
   emit('fileOpen', file)
 }
+
+function handleAddToContext(file: FileEntry) {
+  // Always make it relative to projectPath or just an absolute path
+  // Wait, Claude Code CLI usually wants absolute or relative to CWD.
+  // We can just use the absolute path, or wrap it in quotes if it has spaces
+  const path = file.path.includes(' ') ? `"${file.path}"` : file.path
+  chatStore.injectIntoInput(`/add ${path}`)
+
+  // Also switch to chat tab if not already there
+  if (appStore.viewMode !== 'chat') {
+    appStore.setViewMode('chat')
+  }
+}
 </script>
 
 <template>
@@ -135,6 +148,7 @@ function handleFileOpen(file: FileEntry) {
               :show-hidden="false"
               @select="handleFileSelect"
               @open="handleFileOpen"
+              @add-to-context="handleAddToContext"
             />
             <div
               v-else

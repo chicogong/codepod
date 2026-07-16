@@ -18,6 +18,7 @@ export const useAppStore = defineStore('app', () => {
   const sidebarWidth = ref(260)
   const isSidebarCollapsed = ref(false)
   const viewMode = ref<ViewMode>('chat')
+  const terminalTheme = ref<string>('tokyo-night')
 
   // Auto-checkpoint configuration
   const autoCheckpointConfig = ref<AutoCheckpointConfig>({
@@ -73,6 +74,11 @@ export const useAppStore = defineStore('app', () => {
     viewMode.value = mode
   }
 
+  function setTerminalTheme(themeId: string) {
+    terminalTheme.value = themeId
+    localStorage.setItem('terminalTheme', themeId)
+  }
+
   function setAutoCheckpointConfig(config: Partial<AutoCheckpointConfig>) {
     autoCheckpointConfig.value = {
       ...autoCheckpointConfig.value,
@@ -96,6 +102,12 @@ export const useAppStore = defineStore('app', () => {
         '(prefers-color-scheme: dark)'
       ).matches
       document.documentElement.classList.toggle('dark', isDarkMode.value)
+    }
+
+    // Load terminal theme
+    const savedTerminalTheme = localStorage.getItem('terminalTheme')
+    if (savedTerminalTheme) {
+      terminalTheme.value = savedTerminalTheme
     }
 
     // Load recent projects
@@ -129,6 +141,7 @@ export const useAppStore = defineStore('app', () => {
     sidebarWidth,
     isSidebarCollapsed,
     viewMode,
+    terminalTheme,
     autoCheckpointConfig,
 
     // Getters
@@ -140,6 +153,7 @@ export const useAppStore = defineStore('app', () => {
     toggleDarkMode,
     toggleSidebar,
     setViewMode,
+    setTerminalTheme,
     setAutoCheckpointConfig,
     loadPersistedState,
   }

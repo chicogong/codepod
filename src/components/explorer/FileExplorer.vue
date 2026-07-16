@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch, h } from 'vue'
-import { NTree, NIcon, NSpin, NEmpty, NButton, NTooltip } from 'naive-ui'
-import type { TreeOption } from 'naive-ui'
+import { ref, computed, watch, h, nextTick } from 'vue'
+import {
+  NTree,
+  NIcon,
+  NSpin,
+  NEmpty,
+  NButton,
+  NTooltip,
+  NDropdown,
+} from 'naive-ui'
+import type { TreeOption, DropdownOption } from 'naive-ui'
 import {
   FolderOutline,
   FolderOpenOutline,
@@ -26,6 +34,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'select', file: FileEntry): void
   (e: 'open', file: FileEntry): void
+  (e: 'addToContext', file: FileEntry): void
 }>()
 
 const isLoading = ref(false)
@@ -35,6 +44,54 @@ const entries = ref<FileEntry[]>([])
 const parentPath = ref<string | null>(null)
 const expandedKeys = ref<string[]>([])
 const selectedKeys = ref<string[]>([])
+
+// Context Menu State
+const showDropdown = ref(false)
+const dropdownX = ref(0)
+const dropdownY = ref(0)
+const contextMenuNode = ref<FileTreeNode | null>(null)
+
+const dropdownOptions = computed<DropdownOption[]>(() => {
+  const node = contextMenuNode.value
+  if (!node) return []
+  return [
+    { label: 'Add to Claude Context', key: 'add_to_context' },
+    { label: 'Open File', key: 'open_file', disabled: !node.isFile },
+  ]
+})
+
+function handleContextMenu(e: MouseEvent, node: FileTreeNode) {
+  e.preventDefault()
+  showDropdown.value = false
+  nextTick().then(() => {
+    showDropdown.value = true
+    dropdownX.value = e.clientX
+    dropdownY.value = e.clientY
+    contextMenuNode.value = node
+  })
+}
+
+function handleDropdownSelect(key: string) {
+  showDropdown.value = false
+  if (!contextMenuNode.value) return
+
+  const node = contextMenuNode.value
+  const fileEntry: FileEntry = {
+    name: node.label as string,
+    path: node.path,
+    is_dir: node.isDir,
+    is_file: node.isFile,
+    is_hidden: node.isHidden,
+    extension: node.extension,
+    size: node.size,
+  }
+
+  if (key === 'add_to_context') {
+    emit('addToContext', fileEntry)
+  } else if (key === 'open_file') {
+    if (node.isFile) emit('open', fileEntry)
+  }
+}
 
 // File type icons mapping
 const getFileIcon = (entry: FileEntry) => {
@@ -119,10 +176,19 @@ async function handleExpand(keys: string[], _option: (TreeOption | null)[]) {
   // Could load subdirectory contents here for lazy loading
 }
 
-// Handle double click to open file
+// Handle double click to open file, right click for context menu, and drag to chat
 const handleNodeProps = (info: { option: TreeOption }) => {
   const node = info.option as unknown as FileTreeNode
   return {
+    draggable: true,
+    ondragstart: (e: any) => {
+      if (e.dataTransfer) {
+        const path = node.path.includes(' ') ? `"${node.path}"` : node.path
+        e.dataTransfer.setData('text/plain', `/add ${path} `)
+        e.dataTransfer.effectAllowed = 'copy'
+      }
+    },
+    oncontextmenu: (e: MouseEvent) => handleContextMenu(e, node),
     ondblclick: () => {
       if (node.isFile) {
         emit('open', {
@@ -233,6 +299,21 @@ defineExpose({
           :node-props="handleNodeProps"
           @update:expanded-keys="handleExpand"
           @update:selected-keys="handleSelect"
+        />
+
+        <NDropdown
+          placement="bottom-start"
+          trigger="manual"
+          :x="dropdownX"
+          :y="dropdownY"
+          :options="dropdownOptions"
+          :show="showDropdown"
+          :on-clickoutside="
+            () => {
+              showDropdown = false
+            }
+          "
+          @select="handleDropdownSelect"
         />
       </NSpin>
     </div>

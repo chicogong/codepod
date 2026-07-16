@@ -7,13 +7,22 @@ import AgentList from './AgentList.vue'
 import SkillList from './SkillList.vue'
 import CliSettings from './CliSettings.vue'
 import UsagePanel from './UsagePanel.vue'
+import AppearanceSettings from './AppearanceSettings.vue'
 
 const configStore = useConfigStore()
 
-type TabType = 'cli' | 'mcp' | 'commands' | 'agents' | 'skills' | 'usage'
-const activeTab = ref<TabType>('cli')
+type TabType =
+  | 'cli'
+  | 'appearance'
+  | 'mcp'
+  | 'commands'
+  | 'agents'
+  | 'skills'
+  | 'usage'
+const activeTab = ref<TabType>('appearance')
 
 const tabs: { id: TabType; label: string; icon: string }[] = [
+  { id: 'appearance', label: 'Appearance', icon: '🎨' },
   { id: 'cli', label: 'CLI', icon: '⚙️' },
   { id: 'mcp', label: 'MCP', icon: '🔌' },
   { id: 'commands', label: 'Cmds', icon: '⚡' },
@@ -75,7 +84,8 @@ onMounted(() => {
 
     <!-- Content -->
     <div v-else class="flex-1 overflow-auto">
-      <CliSettings v-if="activeTab === 'cli'" />
+      <AppearanceSettings v-if="activeTab === 'appearance'" />
+      <CliSettings v-else-if="activeTab === 'cli'" />
       <McpServerList v-else-if="activeTab === 'mcp'" />
       <CommandList v-else-if="activeTab === 'commands'" />
       <AgentList v-else-if="activeTab === 'agents'" />

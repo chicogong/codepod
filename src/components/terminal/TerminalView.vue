@@ -1,69 +1,29 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
-import { Terminal, type ITheme } from '@xterm/xterm'
+import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { SearchAddon } from '@xterm/addon-search'
 import { isTauri, safeInvoke, safeListen } from '@/utils'
+import { NInput, NButton, NIcon, NButtonGroup } from 'naive-ui'
+import {
+  SearchOutline,
+  ArrowUpOutline,
+  ArrowDownOutline,
+  CloseOutline,
+} from '@vicons/ionicons5'
 import { useAppStore } from '@/stores'
 import '@xterm/xterm/css/xterm.css'
 
 const appStore = useAppStore()
 
-// Theme definitions
-const darkTheme: ITheme = {
-  background: '#1a1b26',
-  foreground: '#a9b1d6',
-  cursor: '#c0caf5',
-  cursorAccent: '#1a1b26',
-  selectionBackground: '#33467c',
-  selectionForeground: '#c0caf5',
-  black: '#15161e',
-  red: '#f7768e',
-  green: '#9ece6a',
-  yellow: '#e0af68',
-  blue: '#7aa2f7',
-  magenta: '#bb9af7',
-  cyan: '#7dcfff',
-  white: '#a9b1d6',
-  brightBlack: '#414868',
-  brightRed: '#f7768e',
-  brightGreen: '#9ece6a',
-  brightYellow: '#e0af68',
-  brightBlue: '#7aa2f7',
-  brightMagenta: '#bb9af7',
-  brightCyan: '#7dcfff',
-  brightWhite: '#c0caf5',
-}
+import { themes } from '@/utils/terminalThemes'
 
-const lightTheme: ITheme = {
-  background: '#fafafa',
-  foreground: '#383a42',
-  cursor: '#526fff',
-  cursorAccent: '#fafafa',
-  selectionBackground: '#d7d7ff',
-  selectionForeground: '#383a42',
-  black: '#383a42',
-  red: '#e45649',
-  green: '#50a14f',
-  yellow: '#c18401',
-  blue: '#4078f2',
-  magenta: '#a626a4',
-  cyan: '#0184bc',
-  white: '#a0a1a7',
-  brightBlack: '#696c77',
-  brightRed: '#e45649',
-  brightGreen: '#50a14f',
-  brightYellow: '#c18401',
-  brightBlue: '#4078f2',
-  brightMagenta: '#a626a4',
-  brightCyan: '#0184bc',
-  brightWhite: '#fafafa',
-}
-
-// Current theme based on dark mode
-const currentTheme = computed(() =>
-  appStore.isDarkMode ? darkTheme : lightTheme
-)
+// Current theme based on app store setting
+const currentTheme = computed(() => {
+  const themeId = appStore.terminalTheme || 'tokyo-night'
+  return themes[themeId]?.theme || themes['tokyo-night']?.theme
+})
 
 const props = defineProps<{
   sessionId?: string
@@ -83,6 +43,41 @@ const terminalContainer = ref<HTMLDivElement>()
 // Terminal instance
 let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
+let searchAddon: SearchAddon | null = null
+
+// Search state
+const showSearch = ref(false)
+const searchQuery = ref('')
+const searchInputRef = ref<InstanceType<typeof NInput> | null>(null)
+
+function findNext() {
+  if (!searchAddon || !searchQuery.value) return
+  searchAddon.findNext(searchQuery.value)
+}
+
+function findPrev() {
+  if (!searchAddon || !searchQuery.value) return
+  searchAddon.findPrevious(searchQuery.value)
+}
+
+function closeSearch() {
+  showSearch.value = false
+  terminal?.focus()
+}
+
+function onSearchInputKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    if (e.shiftKey) {
+      findPrev()
+    } else {
+      findNext()
+    }
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    closeSearch()
+  }
+}
 
 // State
 const isConnected = ref(false)
@@ -115,6 +110,23 @@ async function initTerminal() {
 
   // Add web links addon
   terminal.loadAddon(new WebLinksAddon())
+
+  // Add search addon
+  searchAddon = new SearchAddon()
+  terminal.loadAddon(searchAddon)
+
+  // Handle Ctrl/Cmd+F for search
+  terminal.attachCustomKeyEventHandler(e => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+      if (e.type === 'keydown') {
+        e.preventDefault()
+        showSearch.value = true
+        nextTick(() => searchInputRef.value?.focus())
+      }
+      return false
+    }
+    return true
+  })
 
   // Open terminal in container
   terminal.open(terminalContainer.value)
@@ -307,7 +319,7 @@ watch(
 
 // Watch for theme changes
 watch(
-  () => appStore.isDarkMode,
+  () => appStore.terminalTheme,
   () => {
     if (terminal) {
       terminal.options.theme = currentTheme.value
@@ -350,6 +362,40 @@ onUnmounted(() => {
         <div class="spinner" />
         <span>Connecting to Claude...</span>
       </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div v-if="showSearch" class="search-bar">
+      <n-input
+        ref="searchInputRef"
+        v-model:value="searchQuery"
+        placeholder="Search terminal..."
+        size="small"
+        clearable
+        @keydown="onSearchInputKeyDown"
+        @input="findNext"
+      >
+        <template #prefix>
+          <n-icon><SearchOutline /></n-icon>
+        </template>
+      </n-input>
+      <n-button-group size="small">
+        <n-button ghost @click="findPrev">
+          <template #icon>
+            <n-icon><ArrowUpOutline /></n-icon>
+          </template>
+        </n-button>
+        <n-button ghost @click="findNext">
+          <template #icon>
+            <n-icon><ArrowDownOutline /></n-icon>
+          </template>
+        </n-button>
+      </n-button-group>
+      <n-button size="small" text style="margin-left: 8px" @click="closeSearch">
+        <template #icon>
+          <n-icon><CloseOutline /></n-icon>
+        </template>
+      </n-button>
     </div>
   </div>
 </template>
@@ -445,5 +491,44 @@ onUnmounted(() => {
   to {
     transform: rotate(360deg);
   }
+}
+
+.search-bar {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  box-shadow:
+    0 10px 30px -5px rgba(0, 0, 0, 0.2),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: slideDownFade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+:global(.dark) .search-bar {
+  background: rgba(30, 32, 48, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+:global(:not(.dark)) .search-bar {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 </style>

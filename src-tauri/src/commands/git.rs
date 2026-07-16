@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
 use std::path::Path;
+use std::process::Command;
 
 use super::CommandResult;
 
@@ -8,7 +8,7 @@ use super::CommandResult;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GitFileStatus {
     pub path: String,
-    pub status: String,      // M, A, D, R, C, U, ?
+    pub status: String, // M, A, D, R, C, U, ?
     pub staged: bool,
     pub status_text: String, // "modified", "added", "deleted", etc.
 }
@@ -53,17 +53,17 @@ fn parse_status_line(line: &str) -> Option<GitFileStatus> {
     if line.len() < 4 {
         return None;
     }
-    
+
     let staged_char = line.chars().next()?;
     let unstaged_char = line.chars().nth(1)?;
     let path = line[3..].to_string();
-    
+
     let (status, staged) = if staged_char != ' ' && staged_char != '?' {
         (staged_char.to_string(), true)
     } else {
         (unstaged_char.to_string(), false)
     };
-    
+
     let status_text = match status.as_str() {
         "M" => "modified",
         "A" => "added",
@@ -74,8 +74,9 @@ fn parse_status_line(line: &str) -> Option<GitFileStatus> {
         "?" => "untracked",
         "!" => "ignored",
         _ => "unknown",
-    }.to_string();
-    
+    }
+    .to_string();
+
     Some(GitFileStatus {
         path,
         status,
@@ -88,11 +89,11 @@ fn parse_status_line(line: &str) -> Option<GitFileStatus> {
 #[tauri::command]
 pub fn get_git_status(path: String) -> CommandResult<GitStatus> {
     let dir_path = Path::new(&path);
-    
+
     if !dir_path.exists() {
         return CommandResult::err(format!("Path does not exist: {}", path));
     }
-    
+
     if !is_git_repo(dir_path) {
         return CommandResult::ok(GitStatus {
             is_repo: false,
@@ -106,7 +107,7 @@ pub fn get_git_status(path: String) -> CommandResult<GitStatus> {
             has_conflicts: false,
         });
     }
-    
+
     // Get current branch
     let branch = Command::new("git")
         .args(["branch", "--show-current"])
@@ -121,7 +122,7 @@ pub fn get_git_status(path: String) -> CommandResult<GitStatus> {
             }
         })
         .filter(|s| !s.is_empty());
-    
+
     // Get ahead/behind counts
     let (ahead, behind) = if branch.is_some() {
         Command::new("git")
@@ -145,19 +146,19 @@ pub fn get_git_status(path: String) -> CommandResult<GitStatus> {
     } else {
         (0, 0)
     };
-    
+
     // Get file status
     let status_output = Command::new("git")
         .args(["status", "--porcelain", "-u"])
         .current_dir(dir_path)
         .output();
-    
+
     let mut files = Vec::new();
     let mut staged_count = 0;
     let mut unstaged_count = 0;
     let mut untracked_count = 0;
     let mut has_conflicts = false;
-    
+
     if let Ok(output) = status_output {
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -178,7 +179,7 @@ pub fn get_git_status(path: String) -> CommandResult<GitStatus> {
             }
         }
     }
-    
+
     CommandResult::ok(GitStatus {
         is_repo: true,
         branch,
@@ -196,16 +197,16 @@ pub fn get_git_status(path: String) -> CommandResult<GitStatus> {
 #[tauri::command]
 pub fn get_git_branch(path: String) -> CommandResult<Option<String>> {
     let dir_path = Path::new(&path);
-    
+
     if !dir_path.exists() || !is_git_repo(dir_path) {
         return CommandResult::ok(None);
     }
-    
+
     let output = Command::new("git")
         .args(["branch", "--show-current"])
         .current_dir(dir_path)
         .output();
-    
+
     match output {
         Ok(o) if o.status.success() => {
             let branch = String::from_utf8_lossy(&o.stdout).trim().to_string();
@@ -230,16 +231,16 @@ pub fn get_git_branch(path: String) -> CommandResult<Option<String>> {
 #[tauri::command]
 pub fn list_git_branches(path: String) -> CommandResult<Vec<GitBranch>> {
     let dir_path = Path::new(&path);
-    
+
     if !dir_path.exists() || !is_git_repo(dir_path) {
         return CommandResult::ok(vec![]);
     }
-    
+
     let output = Command::new("git")
         .args(["branch", "-a", "--format=%(refname:short)%(HEAD)"])
         .current_dir(dir_path)
         .output();
-    
+
     match output {
         Ok(o) if o.status.success() => {
             let stdout = String::from_utf8_lossy(&o.stdout);
@@ -277,20 +278,16 @@ pub struct GitCommit {
 pub fn get_git_log(path: String, count: Option<u32>) -> CommandResult<Vec<GitCommit>> {
     let dir_path = Path::new(&path);
     let limit = count.unwrap_or(10);
-    
+
     if !dir_path.exists() || !is_git_repo(dir_path) {
         return CommandResult::ok(vec![]);
     }
-    
+
     let output = Command::new("git")
-        .args([
-            "log",
-            &format!("-{}", limit),
-            "--format=%H|%h|%s|%an|%ar",
-        ])
+        .args(["log", &format!("-{}", limit), "--format=%H|%h|%s|%an|%ar"])
         .current_dir(dir_path)
         .output();
-    
+
     match output {
         Ok(o) if o.status.success() => {
             let stdout = String::from_utf8_lossy(&o.stdout);
@@ -383,7 +380,7 @@ pub fn git_commit(path: String, message: String) -> CommandResult<()> {
             let stderr = String::from_utf8_lossy(&o.stderr).to_string();
             let stdout = String::from_utf8_lossy(&o.stdout).to_string();
             CommandResult::err(if stderr.is_empty() { stdout } else { stderr })
-        },
+        }
         Err(e) => CommandResult::err(e.to_string()),
     }
 }
@@ -430,25 +427,61 @@ pub fn git_pull(path: String) -> CommandResult<()> {
     }
 }
 
+/// Get git diff for a specific file
+#[tauri::command]
+pub fn get_git_diff(path: String, file_path: String, staged: bool) -> CommandResult<String> {
+    let dir_path = Path::new(&path);
+
+    if !dir_path.exists() || !is_git_repo(dir_path) {
+        return CommandResult::err("Not a git repository".to_string());
+    }
+
+    let mut args = vec!["diff"];
+    if staged {
+        args.push("--cached");
+    }
+    // To handle untracked files properly in git diff, there's no native direct way with `git diff` unless added to index.
+    // We'll just pass the file_path. For untracked files, it might return empty unless we do something else,
+    // but for M, A, D it works.
+    args.push("--");
+    args.push(&file_path);
+
+    let output = Command::new("git")
+        .args(&args)
+        .current_dir(dir_path)
+        .output();
+
+    match output {
+        Ok(o) if o.status.success() => {
+            let stdout = String::from_utf8_lossy(&o.stdout).to_string();
+            // If empty (e.g. untracked file), we could optionally cat the file,
+            // but returning empty string is safe enough for diff viewer to handle.
+            CommandResult::ok(stdout)
+        }
+        Ok(o) => CommandResult::err(String::from_utf8_lossy(&o.stderr).to_string()),
+        Err(e) => CommandResult::err(e.to_string()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::env;
-    
+
     #[test]
     fn test_get_git_status() {
         let current_dir = env::current_dir().unwrap();
         let result = get_git_status(current_dir.to_string_lossy().to_string());
         assert!(result.success);
     }
-    
+
     #[test]
     fn test_get_git_branch() {
         let current_dir = env::current_dir().unwrap();
         let result = get_git_branch(current_dir.to_string_lossy().to_string());
         assert!(result.success);
     }
-    
+
     #[test]
     fn test_parse_status_line() {
         let modified = parse_status_line(" M src/main.rs");
@@ -456,13 +489,13 @@ mod tests {
         let m = modified.unwrap();
         assert_eq!(m.status, "M");
         assert!(!m.staged);
-        
+
         let staged = parse_status_line("M  src/main.rs");
         assert!(staged.is_some());
         let s = staged.unwrap();
         assert_eq!(s.status, "M");
         assert!(s.staged);
-        
+
         let untracked = parse_status_line("?? new_file.txt");
         assert!(untracked.is_some());
         let u = untracked.unwrap();

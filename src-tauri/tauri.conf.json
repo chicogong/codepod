@@ -39,6 +39,10 @@
     ],
     "macOS": {
       "minimumSystemVersion": "10.15"
-    }
+    },
+    "shortDescription": "The Ultimate GUI Desktop App for Claude Code CLI",
+    "longDescription": "Bring the power of Anthropic's terminal agent into a beautiful, persistent, and highly productive desktop environment with a dual-engine Chat and Terminal.",
+    "publisher": "chicogong",
+    "copyright": "Copyright © 2026 chicogong"
   }
 }

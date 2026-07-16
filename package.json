@@ -1,7 +1,28 @@
 {
   "name": "codepod",
-  "private": true,
+  "private": false,
   "version": "0.1.0",
+  "description": "A visually stunning desktop GUI wrapper for Claude Code CLI. Featuring dual-engine Chat & Terminal, MCP Server management, and session checkpoints.",
+  "author": "chicogong",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chicogong/codepod.git"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "ai",
+    "agent",
+    "gui",
+    "desktop",
+    "tauri",
+    "vue",
+    "terminal",
+    "mcp",
+    "model-context-protocol"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -33,6 +54,7 @@
     "@vicons/ionicons5": "^0.13.0",
     "@vueuse/core": "^14.1.0",
     "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^6.0.0",
     "diff": "^8.0.2",

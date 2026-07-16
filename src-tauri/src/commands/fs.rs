@@ -28,17 +28,17 @@ pub struct DirectoryListing {
 #[tauri::command]
 pub fn list_directory(path: String) -> CommandResult<DirectoryListing> {
     let dir_path = Path::new(&path);
-    
+
     if !dir_path.exists() {
         return CommandResult::err(format!("Path does not exist: {}", path));
     }
-    
+
     if !dir_path.is_dir() {
         return CommandResult::err(format!("Path is not a directory: {}", path));
     }
-    
+
     let mut entries = Vec::new();
-    
+
     match fs::read_dir(dir_path) {
         Ok(read_dir) => {
             for entry_result in read_dir {
@@ -47,17 +47,17 @@ pub fn list_directory(path: String) -> CommandResult<DirectoryListing> {
                         let file_name = entry.file_name().to_string_lossy().to_string();
                         let file_path = entry.path();
                         let metadata = entry.metadata().ok();
-                        
+
                         let is_dir = file_path.is_dir();
                         let is_file = file_path.is_file();
                         let is_hidden = file_name.starts_with('.');
-                        
+
                         let size = if is_file {
                             metadata.as_ref().map(|m| m.len())
                         } else {
                             None
                         };
-                        
+
                         let extension = if is_file {
                             file_path
                                 .extension()
@@ -65,7 +65,7 @@ pub fn list_directory(path: String) -> CommandResult<DirectoryListing> {
                         } else {
                             None
                         };
-                        
+
                         entries.push(FileEntry {
                             name: file_name,
                             path: file_path.to_string_lossy().to_string(),
@@ -87,21 +87,17 @@ pub fn list_directory(path: String) -> CommandResult<DirectoryListing> {
             return CommandResult::err(format!("Failed to read directory: {}", e));
         }
     }
-    
+
     // Sort: directories first, then files, alphabetically within each group
-    entries.sort_by(|a, b| {
-        match (a.is_dir, b.is_dir) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-        }
+    entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
     });
-    
+
     // Get parent directory
-    let parent = dir_path
-        .parent()
-        .map(|p| p.to_string_lossy().to_string());
-    
+    let parent = dir_path.parent().map(|p| p.to_string_lossy().to_string());
+
     CommandResult::ok(DirectoryListing {
         path,
         entries,
@@ -113,15 +109,15 @@ pub fn list_directory(path: String) -> CommandResult<DirectoryListing> {
 #[tauri::command]
 pub fn read_file_content(path: String) -> CommandResult<String> {
     let file_path = Path::new(&path);
-    
+
     if !file_path.exists() {
         return CommandResult::err(format!("File does not exist: {}", path));
     }
-    
+
     if !file_path.is_file() {
         return CommandResult::err(format!("Path is not a file: {}", path));
     }
-    
+
     match fs::read_to_string(file_path) {
         Ok(content) => CommandResult::ok(content),
         Err(e) => CommandResult::err(format!("Failed to read file: {}", e)),
@@ -132,27 +128,27 @@ pub fn read_file_content(path: String) -> CommandResult<String> {
 #[tauri::command]
 pub fn get_file_info(path: String) -> CommandResult<FileEntry> {
     let file_path = Path::new(&path);
-    
+
     if !file_path.exists() {
         return CommandResult::err(format!("Path does not exist: {}", path));
     }
-    
+
     let metadata = match fs::metadata(file_path) {
         Ok(m) => m,
         Err(e) => return CommandResult::err(format!("Failed to get metadata: {}", e)),
     };
-    
+
     let file_name = file_path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
-    
+
     let is_dir = metadata.is_dir();
     let is_file = metadata.is_file();
     let is_hidden = file_name.starts_with('.');
-    
+
     let size = if is_file { Some(metadata.len()) } else { None };
-    
+
     let extension = if is_file {
         file_path
             .extension()
@@ -160,7 +156,7 @@ pub fn get_file_info(path: String) -> CommandResult<FileEntry> {
     } else {
         None
     };
-    
+
     CommandResult::ok(FileEntry {
         name: file_name,
         path,
@@ -176,7 +172,7 @@ pub fn get_file_info(path: String) -> CommandResult<FileEntry> {
 mod tests {
     use super::*;
     use std::env;
-    
+
     #[test]
     fn test_list_directory_current() {
         let current_dir = env::current_dir().unwrap();
@@ -184,14 +180,14 @@ mod tests {
         assert!(result.success);
         assert!(result.data.is_some());
     }
-    
+
     #[test]
     fn test_list_directory_not_exists() {
         let result = list_directory("/nonexistent/path/12345".to_string());
         assert!(!result.success);
         assert!(result.error.is_some());
     }
-    
+
     #[test]
     fn test_get_file_info() {
         let current_dir = env::current_dir().unwrap();

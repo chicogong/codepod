@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useChatStore } from '@/stores'
 import { useClaude } from '@/composables'
 import { AVAILABLE_MODELS, type ModelId } from '@/types'
@@ -18,10 +18,41 @@ const { stopGeneration, regenerateMessage } = useClaude()
 const content = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
+// History navigation state
+const historyIndex = ref(-1)
+const draftContent = ref('')
+
+// Watch for injected text (e.g. from FileExplorer)
+watch(
+  () => chatStore.inputInjection,
+  async newVal => {
+    if (newVal) {
+      content.value = content.value ? `${content.value} ${newVal}` : newVal
+      chatStore.clearInputInjection()
+
+      // Focus and adjust height
+      await nextTick()
+      focus()
+      if (textareaRef.value) {
+        textareaRef.value.style.height = 'auto'
+        textareaRef.value.style.height =
+          Math.min(textareaRef.value.scrollHeight, 200) + 'px'
+      }
+    }
+  }
+)
+
 function handleSend() {
   if (!content.value.trim()) return
+
+  // Add to history
+  chatStore.addCommandToHistory(content.value)
+
   emit('send', content.value)
   content.value = ''
+  historyIndex.value = -1
+  draftContent.value = ''
+
   // Reset textarea height
   if (textareaRef.value) {
     textareaRef.value.style.height = 'auto'
@@ -32,6 +63,51 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
     handleSend()
+    return
+  }
+
+  // Handle Command History navigation (Up/Down arrows)
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    const history = chatStore.commandHistory
+    if (history.length === 0) return
+
+    // Allow normal navigation if multiline and not at boundaries
+    const target = e.target as HTMLTextAreaElement
+    if (
+      e.key === 'ArrowUp' &&
+      target.selectionStart > 0 &&
+      content.value.includes('\n')
+    )
+      return
+    if (
+      e.key === 'ArrowDown' &&
+      target.selectionStart < content.value.length &&
+      content.value.includes('\n')
+    )
+      return
+
+    e.preventDefault()
+
+    if (e.key === 'ArrowUp') {
+      // Save draft if we are starting to navigate history
+      if (historyIndex.value === -1) {
+        draftContent.value = content.value
+      }
+
+      if (historyIndex.value < history.length - 1) {
+        historyIndex.value++
+        content.value = history[history.length - 1 - historyIndex.value] || ''
+      }
+    } else if (e.key === 'ArrowDown') {
+      if (historyIndex.value > 0) {
+        historyIndex.value--
+        content.value = history[history.length - 1 - historyIndex.value] || ''
+      } else if (historyIndex.value === 0) {
+        // Restore draft
+        historyIndex.value = -1
+        content.value = draftContent.value
+      }
+    }
   }
 }
 

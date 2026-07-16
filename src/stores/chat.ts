@@ -44,6 +44,22 @@ export const useChatStore = defineStore('chat', () => {
   // Auto-checkpoint tracking
   const lastAutoCheckpointMessageCount = ref(0)
 
+  // Command History (Global across sessions)
+  const commandHistory = ref<string[]>([])
+
+  // Input injection (e.g. from file explorer or drag & drop)
+  const inputInjection = ref<string>('')
+
+  // Load command history on init
+  const savedHistory = localStorage.getItem('commandHistory')
+  if (savedHistory) {
+    try {
+      commandHistory.value = JSON.parse(savedHistory)
+    } catch {
+      commandHistory.value = []
+    }
+  }
+
   // Getters
   const lastMessage = computed(() =>
     messages.value.length > 0 ? messages.value[messages.value.length - 1] : null
@@ -313,6 +329,33 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  // 添加命令历史
+  function addCommandToHistory(command: string) {
+    if (!command.trim()) return
+    // Remove duplicate if it's the last one
+    if (commandHistory.value[commandHistory.value.length - 1] === command)
+      return
+
+    commandHistory.value.push(command)
+    // Keep only last 100 commands
+    if (commandHistory.value.length > 100) {
+      commandHistory.value.shift()
+    }
+    localStorage.setItem('commandHistory', JSON.stringify(commandHistory.value))
+  }
+
+  function injectIntoInput(text: string) {
+    if (inputInjection.value) {
+      inputInjection.value += ' ' + text
+    } else {
+      inputInjection.value = text
+    }
+  }
+
+  function clearInputInjection() {
+    inputInjection.value = ''
+  }
+
   return {
     // State
     messages,
@@ -325,6 +368,8 @@ export const useChatStore = defineStore('chat', () => {
     lastUserMessage,
     sessionInputTokens,
     sessionOutputTokens,
+    commandHistory,
+    inputInjection,
 
     // Getters
     lastMessage,
@@ -355,5 +400,8 @@ export const useChatStore = defineStore('chat', () => {
     addTokens,
     resetTokens,
     setCurrentSessionId,
+    addCommandToHistory,
+    injectIntoInput,
+    clearInputInjection,
   }
 })

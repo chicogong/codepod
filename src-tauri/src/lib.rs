@@ -3,8 +3,8 @@ mod pty;
 
 use commands::{claude, config, fs, git};
 use pty::{
-    create_pty_session, write_to_pty, resize_pty, 
-    close_pty_session, list_pty_sessions, create_claude_pty
+    close_pty_session, create_claude_pty, create_pty_session, list_pty_sessions, resize_pty,
+    write_to_pty,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -42,6 +42,7 @@ pub fn run() {
             git::git_commit,
             git::git_push,
             git::git_pull,
+            git::get_git_diff,
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {

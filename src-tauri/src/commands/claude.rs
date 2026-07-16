@@ -89,9 +89,8 @@ pub async fn invoke_claude_stream(
             if !line.trim().is_empty() {
                 let event = StreamEvent {
                     event_type: "stream".to_string(),
-                    data: serde_json::from_str(&line).unwrap_or_else(|_| {
-                        serde_json::json!({ "raw": line })
-                    }),
+                    data: serde_json::from_str(&line)
+                        .unwrap_or_else(|_| serde_json::json!({ "raw": line })),
                 };
                 let _ = app_clone.emit(&format!("claude-stream-{}", request_id_clone), &event);
             }
@@ -167,7 +166,7 @@ mod tests {
             event_type: "stream".to_string(),
             data: serde_json::json!({"text": "hello"}),
         };
-        
+
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("stream"));
         assert!(json.contains("hello"));
